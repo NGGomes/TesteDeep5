@@ -1,0 +1,143 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 1 — CLASSES
+' ═══════════════════════════════════════════════════════════════════
+
+!theme plain
+skinparam linetype ortho
+skinparam nodesep 12
+skinparam ranksep 150
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ClassBorderColor #94a3b8
+skinparam ClassBackgroundColor #f8fafc
+skinparam ClassFontColor #0f172a
+skinparam ClassHeaderBackgroundColor #e2e8f0
+skinparam ClassAttributeFontColor #334155
+skinparam ClassStereotypeFontColor #64748b
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f8fafc
+
+title Agent 2 — Diagrama de Classes
+
+package "agent2" {
+
+  class GraphReporter {
+    - _last_processed_confirmation_ms: float
+    - _generated_reports: List[Dict]
+    - _lock: RLock
+    - _running: bool
+    - _poll_interval: int
+    - _pending_queue: Dict
+    - _queue_lock: Lock
+    - _processed_confirmations: Set[str]
+    - {static} _QUEUE_FILE: Path
+    --
+    + run(): void
+    + stop(): void
+    + trigger_report_now(label, score, ts, tier, method): bool
+    - _get_graph(): HypothesisGraph
+    - _get_new_confirmations(): List[Tuple]
+    - _get_graph_context(): Dict
+    - _generate_ciso_report(confirmed, context): Dict
+    - _get_recommendations(tier, confirmed, context): List[str]
+    - _get_regulatory_impact(tier): Dict
+    - _save_report(report): Path
+    - _emit_report(report): bool
+    - _auto_confirm_timeouts(): void
+    - _enqueue(label, score, ts, tier, method): void
+    - _dequeue_success(label): void
+    - _process_queue(): void
+    - _load_queue(): Dict
+    - _save_queue(): void
+
+}
+
+  class AlertLoader <<utility>> {
+    - {static} _cache: Dict[str, Dict]
+    - {static} _cache_lock: Lock
+    --
+    + {static} get_alerts_by_ids(alert_ids): List[Dict]
+    - {static} _build_cache(): Dict
+    + {static} invalidate(): void
+  }
+
+  class IncidentAnalyzer <<utility>> {
+    --
+    + {static} analyze_incident(\n  ciso_options, phases, alert_count,\n  assets, cves, iocs,\n  mitre_techniques): Optional[Dict]
+    - {static} _fallback_analysis(\n  ciso_options, phases, alert_count): Dict
+  }
+
+  class DataExtractor <<utility>> {
+    --
+    + {static} extract_assets(alerts): List[str]
+    + {static} extract_cves(alerts): List[str]
+    + {static} extract_ioc_bundle(alerts): Dict
+  }
+
+  class MITREMapper <<utility>> {
+    --
+    + {static} get_techniques_for_phases(\n  phases): List[Dict]
+  }
+
+  class CISOReportGenerator {
+    --
+    + generate(metadata, analysis): str
+    - _format_timestamp(metadata, ms_key, *iso_keys): str
+    - _get_metadata_value(metadata, *keys): str
+    - _build_timeline_rows(timeline): str
+  }
+
+  class SOCReportGenerator {
+    --
+    + generate(metadata, analysis): str
+    - _format_timestamp(metadata, ms_key, *iso_keys): str
+    - _build_timeline_rows(timeline): str
+  }
+
+  class CVERepository <<utility>> {
+    --
+    + {static} get_cve_details(cve_id): Optional[Dict]
+  }
+
+
+note right of GraphReporter
+  Singleton — registado via
+  _set_global_reporter()
+  Acedido via
+  get_global_reporter()
+end note
+
+
+note bottom of AlertLoader
+  Cache em memória indexada
+  por Number e alert_id
+  Lida do dataset original
+end note
+
+note bottom of IncidentAnalyzer
+  Prompt estruturado →
+  LLM (Ollama/Anthropic/OpenAI)
+  → JSON validado
+  Fallback rule-based se LLM indisponível
+end note
+
+
+}
+
+' Relações
+GraphReporter ..> AlertLoader : <<uses>>
+GraphReporter ..> IncidentAnalyzer : <<uses>>\n[_HAS_LLM]
+GraphReporter ..> DataExtractor : <<uses>>\n[_HAS_ANALYZERS]
+GraphReporter ..> CISOReportGenerator : <<uses>>\n[_HAS_LATEX]
+GraphReporter ..> SOCReportGenerator : <<uses>>\n[_HAS_LATEX]
+IncidentAnalyzer ..> MITREMapper : <<uses>>
+IncidentAnalyzer ..> CVERepository : <<uses>>
+@enduml

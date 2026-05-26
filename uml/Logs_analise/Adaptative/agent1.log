@@ -1,0 +1,165 @@
+2026-05-20 15:41:35 [INFO] [agent1.mappings] Mappings module loaded
+2026-05-20 15:41:35 [INFO] [AGENT1_.window_manager] [WindowManager] mode=adaptive
+2026-05-20 15:41:35 [INFO] [agent1.console] ============================================================
+2026-05-20 15:41:35 [INFO] [agent1.console] Agent 1 - Cognitive Security Engine
+2026-05-20 15:41:35 [INFO] [agent1.console] Modo: Streaming (escuta alertas via callback HTTP)
+2026-05-20 15:41:35 [INFO] [agent1.console] Janela CISO: 15 minutos
+2026-05-20 15:41:35 [INFO] [agent1.console] Máx. hipóteses: 3
+2026-05-20 15:41:35 [INFO] [agent1.console] Threshold confirmação: 0.85
+2026-05-20 15:41:35 [INFO] [agent1.console] ============================================================
+2026-05-20 15:41:35 [INFO] [agent1.console] Carregando alertas de: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\projD.txt
+2026-05-20 15:41:35 [INFO] [agent1.console] Carregados 37 alertas
+2026-05-20 15:41:35 [INFO] [agent1.main] Dataset bounds saved: 1777017600000 -> 1777056420000 (37 alerts)
+2026-05-20 15:41:35 [INFO] [agent1.console] Iniciando servidor de callbacks na porta 8002...
+2026-05-20 15:41:35 [INFO] [agent1.main] Agent 1 callback server listening on port 8002
+2026-05-20 15:41:35 [INFO] [agent1.console] Processamento de alertas iniciado. Aguardando alertas...
+2026-05-20 15:41:35 [INFO] [agent1.console] Loop de processamento iniciado - aguardando alertas...
+2026-05-20 15:41:35 [INFO] [agent1.console] Registando com servidor SSE...
+2026-05-20 15:41:38 [INFO] [agent1.main] [REGISTER] Sending to URL: http://localhost:5001/register-agent1
+2026-05-20 15:41:38 [INFO] [agent1.main] [REGISTER] Body: b'{"agent": "agent1", "status": "ready", "callback_url": "http://127.0.0.1:8002/ingest"}'
+2026-05-20 15:42:47 [INFO] [agent1.mappings] Mappings module loaded
+2026-05-20 15:42:47 [INFO] [agent1.window_manager] [WindowManager] mode=adaptive
+2026-05-20 15:42:47 [INFO] [agent1.console] ============================================================
+2026-05-20 15:42:47 [INFO] [agent1.console] Agent 1 - Cognitive Security Engine
+2026-05-20 15:42:47 [INFO] [agent1.console] Modo: Streaming (escuta alertas via callback HTTP)
+2026-05-20 15:42:47 [INFO] [agent1.console] Janela CISO: 15 minutos
+2026-05-20 15:42:47 [INFO] [agent1.console] Máx. hipóteses: 3
+2026-05-20 15:42:47 [INFO] [agent1.console] Threshold confirmação: 0.85
+2026-05-20 15:42:47 [INFO] [agent1.console] ============================================================
+2026-05-20 15:42:47 [INFO] [agent1.console] Carregando alertas de: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\projD.txt
+2026-05-20 15:42:47 [INFO] [agent1.console] Carregados 37 alertas
+2026-05-20 15:42:47 [INFO] [agent1.main] Dataset bounds saved: 1777017600000 -> 1777056420000 (37 alerts)
+2026-05-20 15:42:47 [INFO] [agent1.console] Iniciando servidor de callbacks na porta 8002...
+2026-05-20 15:42:47 [INFO] [agent1.main] Agent 1 callback server listening on port 8002
+2026-05-20 15:42:47 [INFO] [agent1.console] Processamento de alertas iniciado. Aguardando alertas...
+2026-05-20 15:42:47 [INFO] [agent1.console] Loop de processamento iniciado - aguardando alertas...
+2026-05-20 15:42:47 [INFO] [agent1.console] Registando com servidor SSE...
+2026-05-20 15:42:50 [INFO] [agent1.main] [REGISTER] Sending to URL: http://localhost:5001/register-agent1
+2026-05-20 15:42:50 [INFO] [agent1.main] [REGISTER] Body: b'{"agent": "agent1", "status": "ready", "callback_url": "http://127.0.0.1:8002/ingest"}'
+2026-05-20 15:42:52 [INFO] [agent1.main] [REGISTER] Response: {'ok': True, 'message': 'Agent 1 registration acknowledged'}
+2026-05-20 15:42:52 [INFO] [agent1.console] ✓ Registado com sucesso.
+2026-05-20 15:42:52 [INFO] [agent1.console] 
+✅ Agente 1 pronto.
+2026-05-20 15:42:52 [INFO] [agent1.console]    37 alertas carregados no dataset.
+2026-05-20 15:42:52 [INFO] [agent1.console]    O slice.ts controla o ritmo de entrega dos alertas.
+2026-05-20 15:42:52 [INFO] [agent1.console]    O Agente 1 processa APENAS quando recebe callback.
+2026-05-20 15:42:52 [INFO] [agent1.console] 
+   Pressione Ctrl+C para parar.
+
+2026-05-20 15:42:54 [INFO] [agent1.main] Callback received: alert W101
+2026-05-20 15:42:54 [INFO] [agent1.console] [1/37] Processing: W101
+2026-05-20 15:42:54 [INFO] [agent1.main] Processing alert: W101
+2026-05-20 15:43:06 [INFO] [agent1.main] Callback received: alert W102
+2026-05-20 15:43:06 [INFO] [agent1.console] [2/37] Processing: W102
+2026-05-20 15:43:06 [INFO] [agent1.main] Processing alert: W102
+2026-05-20 15:43:17 [INFO] [agent1.main] Callback received: alert W103
+2026-05-20 15:43:17 [INFO] [agent1.console] [3/37] Processing: W103
+2026-05-20 15:43:17 [INFO] [agent1.main] Processing alert: W103
+2026-05-20 15:43:29 [INFO] [agent1.main] Callback received: alert W104
+2026-05-20 15:43:29 [INFO] [agent1.console] [4/37] Processing: W104
+2026-05-20 15:43:29 [INFO] [agent1.main] Processing alert: W104
+2026-05-20 15:43:40 [INFO] [agent1.main] Callback received: alert W105
+2026-05-20 15:43:40 [INFO] [agent1.console] [5/37] Processing: W105
+2026-05-20 15:43:40 [INFO] [agent1.main] Processing alert: W105
+2026-05-20 15:43:51 [INFO] [agent1.main] Callback received: alert W106
+2026-05-20 15:43:51 [INFO] [agent1.console] [6/37] Processing: W106
+2026-05-20 15:43:51 [INFO] [agent1.main] Processing alert: W106
+2026-05-20 15:44:03 [INFO] [agent1.main] Callback received: alert W107
+2026-05-20 15:44:03 [INFO] [agent1.console] [7/37] Processing: W107
+2026-05-20 15:44:03 [INFO] [agent1.main] Processing alert: W107
+2026-05-20 15:44:14 [INFO] [agent1.main] Callback received: alert W108
+2026-05-20 15:44:14 [INFO] [agent1.console] [8/37] Processing: W108
+2026-05-20 15:44:14 [INFO] [agent1.main] Processing alert: W108
+2026-05-20 15:44:26 [INFO] [agent1.main] Callback received: alert W109
+2026-05-20 15:44:26 [INFO] [agent1.console] [9/37] Processing: W109
+2026-05-20 15:44:26 [INFO] [agent1.main] Processing alert: W109
+2026-05-20 15:44:37 [INFO] [agent1.main] Callback received: alert W110
+2026-05-20 15:44:37 [INFO] [agent1.console] [10/37] Processing: W110
+2026-05-20 15:44:37 [INFO] [agent1.main] Processing alert: W110
+2026-05-20 15:44:49 [INFO] [agent1.main] Callback received: alert W111
+2026-05-20 15:44:49 [INFO] [agent1.console] [11/37] Processing: W111
+2026-05-20 15:44:49 [INFO] [agent1.main] Processing alert: W111
+2026-05-20 15:45:00 [INFO] [agent1.main] Callback received: alert W112
+2026-05-20 15:45:00 [INFO] [agent1.console] [12/37] Processing: W112
+2026-05-20 15:45:00 [INFO] [agent1.main] Processing alert: W112
+2026-05-20 15:45:11 [INFO] [agent1.main] Callback received: alert W113
+2026-05-20 15:45:11 [INFO] [agent1.console] [13/37] Processing: W113
+2026-05-20 15:45:11 [INFO] [agent1.main] Processing alert: W113
+2026-05-20 15:45:13 [INFO] [agent1.hypothesis_graph] *** AUTO-CONFIRMED: Major Breach with Impact (score=0.850, evidence=1) ***
+2026-05-20 15:45:15 [INFO] [agent1.main] Window evidence | window_id=6fe5220b | phases=['EXFILTRATION', 'IMPACT'] | phase_score=15 | alert_count=3
+2026-05-20 15:45:15 [INFO] [agent1.main] *** CONFIRMED HYPOTHESIS: Major Breach with Impact (score=0.850) by auto ***
+2026-05-20 15:45:15 [INFO] [agent1.console] ✓ CONFIRMED (auto): Major Breach with Impact
+2026-05-20 15:45:27 [INFO] [agent1.main] Callback received: alert W114
+2026-05-20 15:45:27 [INFO] [agent1.console] [14/37] Processing: W114
+2026-05-20 15:45:27 [INFO] [agent1.main] Processing alert: W114
+2026-05-20 15:45:29 [INFO] [agent1.main] Window evidence | window_id=d3db3ebb | phases=['EXFILTRATION', 'IMPACT'] | phase_score=15 | alert_count=3
+2026-05-20 15:45:40 [INFO] [agent1.main] Callback received: alert W115
+2026-05-20 15:45:40 [INFO] [agent1.console] [15/37] Processing: W115
+2026-05-20 15:45:40 [INFO] [agent1.main] Processing alert: W115
+2026-05-20 15:45:52 [INFO] [agent1.main] Callback received: alert W116
+2026-05-20 15:45:52 [INFO] [agent1.console] [16/37] Processing: W116
+2026-05-20 15:45:52 [INFO] [agent1.main] Processing alert: W116
+2026-05-20 15:46:03 [INFO] [agent1.main] Callback received: alert W201
+2026-05-20 15:46:03 [INFO] [agent1.console] [17/37] Processing: W201
+2026-05-20 15:46:03 [INFO] [agent1.main] Processing alert: W201
+2026-05-20 15:46:15 [INFO] [agent1.main] Callback received: alert W202
+2026-05-20 15:46:15 [INFO] [agent1.console] [18/37] Processing: W202
+2026-05-20 15:46:15 [INFO] [agent1.main] Processing alert: W202
+2026-05-20 15:46:27 [INFO] [agent1.main] Callback received: alert W203
+2026-05-20 15:46:28 [INFO] [agent1.console] [19/37] Processing: W203
+2026-05-20 15:46:28 [INFO] [agent1.main] Processing alert: W203
+2026-05-20 15:46:40 [INFO] [agent1.main] Callback received: alert W204
+2026-05-20 15:46:40 [INFO] [agent1.console] [20/37] Processing: W204
+2026-05-20 15:46:40 [INFO] [agent1.main] Processing alert: W204
+2026-05-20 15:46:52 [INFO] [agent1.main] Callback received: alert W205
+2026-05-20 15:46:52 [INFO] [agent1.console] [21/37] Processing: W205
+2026-05-20 15:46:52 [INFO] [agent1.main] Processing alert: W205
+2026-05-20 15:47:04 [INFO] [agent1.main] Callback received: alert W206
+2026-05-20 15:47:04 [INFO] [agent1.console] [22/37] Processing: W206
+2026-05-20 15:47:04 [INFO] [agent1.main] Processing alert: W206
+2026-05-20 15:47:17 [INFO] [agent1.main] Callback received: alert W301
+2026-05-20 15:47:17 [INFO] [agent1.console] [23/37] Processing: W301
+2026-05-20 15:47:17 [INFO] [agent1.main] Processing alert: W301
+2026-05-20 15:47:29 [INFO] [agent1.main] Callback received: alert W302
+2026-05-20 15:47:29 [INFO] [agent1.console] [24/37] Processing: W302
+2026-05-20 15:47:29 [INFO] [agent1.main] Processing alert: W302
+2026-05-20 15:47:40 [INFO] [agent1.main] Callback received: alert W303
+2026-05-20 15:47:40 [INFO] [agent1.console] [25/37] Processing: W303
+2026-05-20 15:47:40 [INFO] [agent1.main] Processing alert: W303
+2026-05-20 15:47:52 [INFO] [agent1.main] Callback received: alert W304
+2026-05-20 15:47:52 [INFO] [agent1.console] [26/37] Processing: W304
+2026-05-20 15:47:52 [INFO] [agent1.main] Processing alert: W304
+2026-05-20 15:48:04 [INFO] [agent1.main] Callback received: alert W401
+2026-05-20 15:48:04 [INFO] [agent1.console] [27/37] Processing: W401
+2026-05-20 15:48:04 [INFO] [agent1.main] Processing alert: W401
+2026-05-20 15:48:16 [INFO] [agent1.main] Callback received: alert W402
+2026-05-20 15:48:16 [INFO] [agent1.console] [28/37] Processing: W402
+2026-05-20 15:48:16 [INFO] [agent1.main] Processing alert: W402
+2026-05-20 15:48:27 [INFO] [agent1.main] Callback received: alert W501
+2026-05-20 15:48:27 [INFO] [agent1.console] [29/37] Processing: W501
+2026-05-20 15:48:27 [INFO] [agent1.main] Processing alert: W501
+2026-05-20 15:48:39 [INFO] [agent1.main] Callback received: alert W502
+2026-05-20 15:48:39 [INFO] [agent1.console] [30/37] Processing: W502
+2026-05-20 15:48:40 [INFO] [agent1.main] Processing alert: W502
+2026-05-20 15:48:51 [INFO] [agent1.main] Callback received: alert W503
+2026-05-20 15:48:51 [INFO] [agent1.console] [31/37] Processing: W503
+2026-05-20 15:48:51 [INFO] [agent1.main] Processing alert: W503
+2026-05-20 15:49:02 [INFO] [agent1.main] Callback received: alert W504
+2026-05-20 15:49:02 [INFO] [agent1.console] [32/37] Processing: W504
+2026-05-20 15:49:02 [INFO] [agent1.main] Processing alert: W504
+2026-05-20 15:49:14 [INFO] [agent1.main] Callback received: alert W505
+2026-05-20 15:49:14 [INFO] [agent1.console] [33/37] Processing: W505
+2026-05-20 15:49:14 [INFO] [agent1.main] Processing alert: W505
+2026-05-20 15:49:26 [INFO] [agent1.main] Callback received: alert N101
+2026-05-20 15:49:26 [INFO] [agent1.console] [34/37] Processing: N101
+2026-05-20 15:49:26 [INFO] [agent1.main] Processing alert: N101
+2026-05-20 15:49:36 [INFO] [agent1.main] Callback received: alert N102
+2026-05-20 15:49:36 [INFO] [agent1.console] [35/37] Processing: N102
+2026-05-20 15:49:36 [INFO] [agent1.main] Processing alert: N102
+2026-05-20 15:49:46 [INFO] [agent1.main] Callback received: alert N103
+2026-05-20 15:49:46 [INFO] [agent1.console] [36/37] Processing: N103
+2026-05-20 15:49:46 [INFO] [agent1.main] Processing alert: N103
+2026-05-20 15:49:58 [INFO] [agent1.main] Callback received: alert N104
+2026-05-20 15:49:58 [INFO] [agent1.console] [37/37] Processing: N104
+2026-05-20 15:49:58 [INFO] [agent1.main] Processing alert: N104
+2026-05-20 15:50:01 [INFO] [agent1.console] Todos os 37 alertas processados.

@@ -1,0 +1,210 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 1 — CLASSES (estrutura estática)
+' ═══════════════════════════════════════════════════════════════════
+
+!theme plain
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam ranksep 50
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ClassBorderColor #94a3b8
+skinparam ClassBackgroundColor #f8fafac
+skinparam ClassFontColor #0f172a
+skinparam ClassHeaderBackgroundColor #e2e8f0
+skinparam ClassAttributeFontColor #334155
+skinparam ClassStereotypeFontColor #64748b
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f8fafc
+
+title Agent 1 — Diagrama de Classes
+
+package "agent1" {
+
+  class WindowAlert <<dataclass>> {
+    + alert_id: str
+    + timestamp_ms: int
+    + timestamp_iso: str
+    + category: str
+    + alert_type: str
+    + phase: str
+    + phase_weight: float
+    + is_noise: bool
+  }
+
+  class CISOOption <<dataclass>> {
+    + category: str
+    + probability: float
+    + risk_tier: str
+  }
+
+  class WindowEvidence <<dataclass>> {
+    + window_id: str
+    + phases: List[str]
+    + phase_score: int
+    + ciso_options: List[CISOOption]
+    + created_at_ms: int
+    + closed_at_ms: int
+    + alert_count: int
+    + alert_ids: List[str]
+  }
+
+  class AdaptiveWindow {
+    + window_id: str
+    + trigger_alert: Dict
+    + created_at_ms: int
+    + expires_at_ms: int
+    + decision_deadline_ms: int
+    + window_minutes: int
+    + window_mode: str
+    + trigger_phase: str
+    + alerts: List[WindowAlert]
+    + phases: List[str]
+    + is_closed: bool
+    + close_reason: Optional[str]
+    + final_ciso_options: List[CISOOption]
+    + validation_requested: bool
+    + validation_completed: bool
+    --
+    + add_alert(alert, ts_ms): bool
+    + check_timeout(now_ms): bool
+    + request_operator_validation(): bool
+    + get_evidence(): Optional[WindowEvidence]
+    + get_state(): dict
+    - _try_extend(phase, weight): void
+    - _update_ciso_options(): void
+    - _check_convergence(): void
+    - _emit_created(): void
+    - _emit_update(): void
+    - _emit_closed(): void
+    - _add_alert(alert, ts_ms): void
+  }
+
+  class WindowManager {
+    + windows: Dict[str, AdaptiveWindow]
+    - _lock: RLock
+    - _window_counter: int
+    - _closed_windows_evidence: List[WindowEvidence]
+    --
+    + on_alert(alert, ts_ms, callback): Optional[WindowEvidence]
+    + request_validation_for_window(window_id): bool
+    + get_all_windows_state(): List[dict]
+    + get_closed_windows_evidence(): List[WindowEvidence]
+    + get_statistics(): dict
+    + close_window(window_id, reason): bool
+    + reset(): void
+  }
+
+  class GraphNode <<dataclass>> {
+    + label: str
+    + cumulative_score: float
+    + evidence_count: int
+    + last_updated_ms: float
+    + confirmed: bool
+    + confirmation_time_ms: float
+    + risk_tier: str
+    + confirmed_by: str
+  }
+
+  class GraphEdge <<dataclass>> {
+    + source_phase: str
+    + target_phase: str
+    + weight: float
+    + evidence_count: int
+    + last_updated_ms: float
+  }
+
+  class PendingValidation <<dataclass>> {
+    + hypothesis_label: str
+    + probability: float
+    + risk_tier: str
+    + phases: List[str]
+    + evidence_count: int
+    + created_at_ms: float
+    + expires_at_ms: float
+    + window_id: str
+    + alert_ids: List[str]
+    + ciso_options: List[Dict]
+  }
+
+  class HypothesisGraph {
+    - _nodes: Dict[str, GraphNode]
+    - _edges: Dict[Tuple, GraphEdge]
+    - _phase_sequence_cache: Dict
+    - _lock: RLock
+    - _confirmed_hypotheses: Set[str]
+    - _pending_validations: Dict[str, PendingValidation]
+    - _confirmed_by_operator: Set[str]
+    - _confirmed_by_timeout: Set[str]
+    - _global_phases_seen: Set[str]
+    - _window_evidence_log: List[Dict]
+    --
+    + add_evidence(window_id, hypothesis, score, phases, ...): void
+    + confirm_by_operator(window_id, hypothesis_label): bool
+    + auto_confirm_timeouts(): List[Tuple]
+    + get_pending_validations(): List[Dict]
+    + get_top_hypotheses(limit): List[Tuple]
+    + get_confirmed_hypotheses(since_ms): List[Tuple]
+    + get_window_evidence_summary(): List[Dict]
+    + get_kill_chain_progress(): Dict
+    + get_graph_state(): dict
+    + reset(): void
+    - _apply_decay(now_ms): void
+    - _update_global_kill_chain_edges(phases, ts): void
+    - _load_persistent_state(): void
+    - _save_persistent_state(): void
+  }
+
+  class ProbabilisticClassifier {
+    - _counts: Dict[str, Dict[str, Dict[str, int]]]
+    - _prediction_log: List[Dict]
+    - _total_confirmations: int
+    - _lock: RLock
+    --
+    + predict(phases, prior_options): List[Tuple[str, float]]
+    + record_confirmation(phases, confirmed_label, all_options): void
+    + get_stats(): dict
+    - _phase_key(phases): str
+    - _load(): void
+    - _save(): void
+  }
+
+
+
+' Relations
+WindowManager "1" *-- "0..*" AdaptiveWindow : manages >
+AdaptiveWindow "1" *-- "1..*" WindowAlert : contains >
+AdaptiveWindow "1" *-- "0..*" CISOOption : classifies as >
+AdaptiveWindow ..> WindowEvidence : <<creates>>
+AdaptiveWindow ..> ProbabilisticClassifier : <<uses>>
+WindowEvidence "1" *-- "0..*" CISOOption : wraps >
+
+HypothesisGraph "1" *-- "0..*" GraphNode : nodes >
+HypothesisGraph "1" *-- "0..*" GraphEdge : edges >
+HypothesisGraph "1" *-- "0..*" PendingValidation : pending >
+HypothesisGraph ..> WindowEvidence : <<receives>>
+
+WindowManager ..> HypothesisGraph : <<notifies via callback>>
+ProbabilisticClassifier ..> CISOOption : <<produces>>
+
+note left of HypothesisGraph 
+  Estado persistido em
+  reports/agent1/hypothesis_graph.json
+  — sobrevive a reinícios
+end note
+
+note bottom of ProbabilisticClassifier
+  Estado persistido em
+  reports/agent1/classifier_state.json
+  — aprende por feedback do operador
+end note
+}
+@enduml

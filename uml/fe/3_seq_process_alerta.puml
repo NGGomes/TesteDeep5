@@ -1,0 +1,94 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 3 — SEQUÊNCIA: PROCESSAMENTO DE UM ALERTA
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_sequence_alert
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title Dashboard Frontend — Sequência: Ciclo de Processamento de Alerta
+
+actor Analista as UI
+participant "slice.ts\n(countdown)" as SL
+participant "main.ts\n(SSE loop)" as MAIN
+participant "SSE Server\n:5001" as SSE
+participant "store.ts" as ST
+participant "windows_panel.ts" as WP
+participant "agent2.ts" as A2
+participant "alert_timeline.ts" as AT
+
+UI -> MAIN : DOMContentLoaded\n/ connectSSE()
+MAIN -> SSE : new EventSource('/events')
+SSE --> MAIN : SSE stream aberto
+
+MAIN -> SSE : POST /api/agent1/process-next\n{alert_index: 0}
+note right of MAIN
+  requestProcessAlert(index)
+  envia o pedido de processamento
+  ao SSE Server. O servidor
+  dispara o Agent 1.
+end note
+
+SSE --> MAIN : event: dataset_bounds\n{dataMinMs, dataMaxMs, total_alerts,\n first_alert, second_alert}
+MAIN -> SL : setDatasetBounds(min, max)
+MAIN -> SL : updateCurrentAlertDisplay(\n  number, category, type, ts)
+MAIN -> MAIN : renderFull()
+
+SSE --> MAIN : event: agent1_progress\n{index, total, active_windows}
+
+SSE --> MAIN : event: next_alert_info\n{next_alert, gap_ms}
+MAIN -> SL : updateNextAlertInfo(alert, gap)
+SL -> SL : startCountdown(seconds, alert, cb)
+
+SL --> MAIN : [callback após countdown]\nonComplete()
+MAIN -> SSE : POST /api/agent1/process-next\n{alert_index: N+1}
+
+SSE --> MAIN : event: alert {AlertPayload}
+MAIN -> ST : addAlert(payload)\nsetAlerts([...alerts, payload])
+MAIN -> AT : updateTimelineDisplay()
+
+alt [window_id associado]
+  MAIN -> WP : _activeWindows[i].alerts.push(payload)
+end
+
+SSE --> MAIN : event: window_created\n{window_id, ciso_options,\n trigger_alert, expires_at_ms}
+MAIN -> ST : addWindow(windowData)
+MAIN -> MAIN : _activeWindows.unshift(newWindow)
+MAIN -> MAIN : startWindowTimeout(window_id, expires_at_ms)
+MAIN -> MAIN : renderFull()
+
+SSE --> MAIN : event: window_updated\n{window_id, ciso_options,\n phase_score, phases}
+MAIN -> MAIN : _activeWindows[i] = {...merged}
+MAIN -> WP : renderWindowsPanel(_activeWindows)
+
+opt [prob_top ≥ 75% AND NOT pushed]
+  MAIN -> MAIN : _pushWindowContextToExtension(w)
+  MAIN -> MAIN : window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*')
+end
+
+SSE --> MAIN : event: hypothesis_confirmed\n{label, score, method, window_id}
+MAIN -> MAIN : _pendingReports.add(label)
+MAIN -> MAIN : _activeWindows[i].is_closed = true\nconfirmed_by = method
+MAIN -> MAIN : renderFull()
+
+SSE --> MAIN : event: ciso_report {report}
+MAIN -> ST : setAgent2Reports([report, ...prev])
+MAIN -> ST : persistAgent2()
+MAIN -> MAIN : _pendingReports.delete(label)
+MAIN -> A2 : renderAgent2Panel(reports)
+MAIN -> MAIN : renderFull()
+@enduml

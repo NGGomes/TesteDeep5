@@ -1,0 +1,93 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 5 — ACTIVIDADE: GERAÇÃO DO RELATÓRIO
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_activity
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #e2e8f0
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #94a3b8
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 2 — Diagrama de Actividade: Pipeline de Geração de Relatório 
+
+|GraphReporter|
+start
+:Confirmação recebida\n{label, score, ts, tier, method};
+
+:_enqueue(label)\npersistir .pending_queue.json;
+
+:_get_graph_context()\n→ kill_chain_progress,\n  top_hypotheses,\n  window_evidence_summary;
+
+|AlertLoader|
+:get_alert_ids_for_confirmations(\n  confirmed_labels);
+:_build_cache() se necessário\n(lê dataset .txt uma vez);
+:get_alerts_by_ids(alert_ids)\n→ raw_alerts: List[Dict];
+
+|DataExtractor|
+if (_HAS_ANALYZERS?) then (sim)
+  fork
+    :extract_assets(raw_alerts)\n→ hostnames, IPs de activos;
+  fork again
+    :extract_cves(raw_alerts)\n→ CVE-XXXX-XXXXX ids;
+  fork again
+    :extract_ioc_bundle(raw_alerts)\n→ {ipv4, fqdns,\n   executables, cve_ids};
+  end fork
+  :deduplicar IoCs;
+else (não)
+  :assets = []\ncves = []\niocs = [];
+end if
+
+|IncidentAnalyzer|
+if (_HAS_LLM?) then (sim)
+  :construir prompt estruturado:\n• kill chain phases\n• CISO classifications\n• assets, CVEs, IoCs\n• alert count;
+  :_call_llm(prompt)\ntimeout = AGENT2_TIMEOUT_SECONDS\nmax_tokens = AGENT2_MAX_TOKENS;
+  if (resposta válida\ne JSON parseável?) then (sim)
+    :llm_analysis = {\n  executive_summary,\n  business_impact,\n  mitre_techniques,\n  recommended_actions,\n  regulatory_impact,\n  risk_tier\n};
+  else (não — JSON inválido ou timeout)
+    :_fallback_analysis()\nrule-based sem LLM;
+  end if
+else (não)
+  :_fallback_analysis()\nrule-based sem LLM;
+end if
+
+|GraphReporter|
+:assemblar report Dict:\n──────────────────────\nmetadata {agent, generated_at,\n  confirmation_method, window_id,\n  alert_count, phases, window_start/end}\ndecision {selected_hypothesis,\n  all_hypotheses, decision_method}\nciso_report {executive_summary,\n  top_risk_tier, strategic_recommendations,\n  regulatory_implications, business_impact}\nsoc_report {raw_alerts, trigger_events,\n  affected_assets, ioc_bundle,\n  kill_chain_phases, mitre_techniques}\nexecutive_summary\nconfirmed_hypotheses\nrecommended_actions\nregulatory_impact;
+
+|CISOReportGenerator|
+if (_HAS_LATEX?) then (sim)
+  fork
+    :CISOReportGenerator.generate(\n  metadata, analysis)\n→ ciso_XXXXXX.tex;
+    :POST :5002/generate {tex}\n→ ciso_XXXXXX.pdf;
+  fork again
+    :SOCReportGenerator.generate(\n  metadata, analysis)\n→ soc_XXXXXX.tex;
+    :POST :5002/generate {tex}\n→ soc_XXXXXX.pdf;
+  end fork
+  :report["metadata"]["tex_file"] = path\nreport["metadata"]["pdf_file"] = path;
+else (não)
+end if
+
+|GraphReporter|
+:_save_report()\ngraph_report_YYYYMMDD_HHMMSS.json\nem reports/agent2/;
+
+:_emit_report()\nPOST :5001/ingest\n{type: "ciso_report", payload};
+
+if (ok == True?) then (sim)
+  :_dequeue_success(label)\nremove de .pending_queue.json\n_processed_confirmations.add(label);
+else (não — SSE falhou)
+  :manter em fila\nretry na próxima iteração\ndo poll loop;
+end if
+stop
+@enduml

@@ -1,0 +1,160 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 2 — CLASSES E INTERFACES (TIPOS)
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_classes
+!theme plain
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ClassBorderColor #94a3b8
+skinparam ClassBackgroundColor #f8fafc
+skinparam ClassFontColor #0f172a
+skinparam ClassHeaderBackgroundColor #e2e8f0
+skinparam ClassAttributeFontColor #334155
+skinparam ClassStereotypeFontColor #64748b
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f8fafc
+
+title Dashboard Frontend — Interfaces TypeScript
+
+package "src/core/types.ts" {
+
+  interface AlertPayload {
+    + number: string
+    + title: string
+    + severity: string
+    + category: string
+    + ts: string
+    + source: string
+    + affected_asset: string
+    + mitre: string
+    + kill_chain: string
+    + phases_detected: string[]
+    + classifications: CISOClassification[]
+    + primary_ciso: CISOClassification
+    + soc_routing: string
+    + tlp: string
+    + tags: string
+    + emitted_at: string
+    + detected_threat_type: string
+    + ciso_state: string
+    + phase_score: number
+    + trigger_type: string
+    + discard_reason: string
+    + is_discarded: boolean
+    + window_id?: string
+  }
+
+  interface CISOClassification {
+    + ciso_category_id: number
+    + ciso_category_name: string
+    + risk_tier: RiskTier
+    + plausibility: number
+  }
+
+  interface WindowHypothesis {
+    + probability: number
+    + category: string
+    + risk_tier: string
+    + evidenceCount: number
+    + evidenceGap: number
+  }
+
+  interface WindowState {
+    + window_id: string
+    + created_at_ms: number
+    + expires_at_ms: number
+    + alert_count: number
+    + phases: string[]
+    + phase_score: number
+    + is_closed: boolean
+    + current_ciso_options: WindowHypothesis[]
+    + confirmed_label?: string
+    + confirmed_by?: string
+    + close_reason?: string
+  }
+
+  interface Agent2Report {
+    + metadata: ReportMetadata
+    + ciso_report: CISOSection
+    + soc_report: SOCSection
+    + decision: DecisionSection
+    + executive_summary: string
+    + confirmed_hypotheses: ConfirmedHypothesis[]
+    + recommended_actions: string[]
+    + regulatory_impact: RegImpact
+  }
+
+  interface HypothesisGraphState {
+    + nodes: HypothesisGraphNode[]
+    + edges: HypothesisGraphEdge[]
+    + confirmed_hypotheses: string[]
+    + kill_chain_progress: Record<string, number>
+  }
+
+  interface HypothesisGraphNode {
+    + id: string
+    + label: string
+    + score: number
+    + confirmed: boolean
+    + risk_tier: string
+    + evidence_count: number
+  }
+
+  interface HypothesisGraphEdge {
+    + source: string
+    + target: string
+    + weight: number
+  }
+
+  interface SliceState {
+    + dataMinMs: number
+    + dataMaxMs: number
+    + windowStartMs: number
+    + speedFactor: number
+    + totalAlerts: number
+    + currentIndex: number
+  }
+
+  interface TimelineAlert {
+    + number: string
+    + timestamp_ms: number
+    + category: string
+    + type: string
+    + phase?: string
+    + severity?: string
+    + window_id?: string
+  }
+
+  interface AlertTimelineOptions {
+    + alerts: TimelineAlert[]
+    + height: number
+    + selectedAlertNumber?: string
+    + onAlertClick?: (alert: TimelineAlert) => void
+  }
+
+note bottom of WindowState
+  Estado local do frontend —
+  enriquecido progressivamente:
+  window_created → window_updated
+  → hypothesis_confirmed
+end note
+
+}
+
+' Relações
+WindowState "1" o-- "0..*" WindowHypothesis : current_ciso_options
+AlertPayload "1" o-- "0..*" CISOClassification : classifications
+AlertPayload "1" *-- "1" CISOClassification : primary_ciso
+Agent2Report "1" *-- "1" HypothesisGraphState : graph context
+AlertTimelineOptions "1" o-- "0..*" TimelineAlert : alerts
+HypothesisGraphState "1" *-- "0..*" HypothesisGraphNode : nodes
+HypothesisGraphState "1" *-- "0..*" HypothesisGraphEdge : edges
+
+@enduml

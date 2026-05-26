@@ -1,0 +1,136 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 3 — MECANISMO DE REAPRENDIZAGEM
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent1_learning
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #e2e8f0
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #94a3b8
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Mecanismo de Reaprendizagem\n(ProbabilisticClassifier — feedback loop)
+
+|Trigger de Aprendizagem|
+start
+
+split
+  :Confirmação manual\npelo operador\n(confirm_by_operator);
+split again
+  :Convergência automática\n(prob ≥ 85% / 97%)\nNÃO actualiza classifier;
+  note right
+    Timeouts e convergência
+    automática são ignorados
+    para aprendizagem —
+    evita aprender inércia
+  end note
+  stop
+end split
+
+|HypothesisGraph.confirm_by_operator()|
+:node.confirmed = True\nconfirmed_by = "operator"\nclassifier.record_confirmation(\n  phases, confirmed_label, all_options\n);
+
+|ProbabilisticClassifier.record_confirmation()|
+:phase_key = "|".join(phases)\nex: "RECON|LATERAL_MOVEMENT|EXFIL";
+
+note right
+  Estrutura de dados interna:
+  ──────────────────────────────────────────
+  _counts[phase_key][ciso_label] = {
+    "confirmed": int,   ← operador confirmou
+    "rejected":  int,   ← operador rejeitou
+    "total":     int    ← confirmed + rejected
+  }
+  ──────────────────────────────────────────
+  Uma entrada por (sequência_de_fases, categoria)
+end note
+
+:_counts[key][confirmed_label]\n  ["confirmed"] += 1\n  ["total"] += 1;
+
+:Para cada label alternativo\napresentado (não confirmado):;
+:_counts[key][other_label]\n  ["rejected"] += 1\n  ["total"] += 1;
+
+:_total_confirmations += 1;
+
+:Registar em _prediction_log:\n{phase_key, confirmed,\noptions, total_confirmations};
+
+|Persistência|
+:_save() → classifier_state.json;
+note right
+  Ficheiro JSON com:
+  • counts (tabela completa)
+  • total_confirmations
+  • prediction_log (últimas 200)
+  ──────────────────────────────
+  Sobrevive a reinícios do processo
+end note
+
+|Efeito na próxima predição|
+:Na próxima janela com\nmesma sequência de fases:;
+
+|ProbabilisticClassifier.predict()|
+:phase_key = "|".join(unique_phases);
+
+if (learned data existe\npara este phase_key?) then (sim)
+  fork
+    :learned_probs[cat] =\n(confirmed + α) /\n(total_confirmed + α × N)\n\nα = 1.0 (Laplace smoothing)\nN = nº de categorias;
+  fork again
+    :norm_prior[cat] =\nprior_map[cat] / Σ priors;
+  end fork
+
+  :p_final[cat] =\n(1 - w) × norm_prior[cat]\n+ w × learned_probs[cat]\n\nw = 0.3 (LEARNING_WEIGHT)\n─────────────────────────\n30% experiência passada\n70% conhecimento estático;
+
+  :Normalizar p_final;\n  Σ p_final[cat] = 1.0;
+
+  :Ordenar descendente;\n  top-N hipóteses;
+
+  note right
+    Exemplo concreto:
+    ─────────────────────────────────────
+    phase_key = "RECON|EXFIL"
+    Prior estático:
+      Major Breach → 0.60
+      APT Data Theft → 0.30
+      Noise → 0.10
+    Operador confirmou "APT Data Theft"
+    3 vezes para esta sequência:
+      learned: APT = 3/3 = 1.0
+      (com Laplace: 4/6 = 0.67)
+    Mistura (w=0.3):
+      Major Breach = 0.7×0.60 + 0.3×0.11 = 0.45
+      APT Data Theft = 0.7×0.30 + 0.3×0.67 = 0.41
+      Noise = 0.7×0.10 + 0.3×0.22 = 0.14
+    → APT Data Theft sobe na classificação
+    ─────────────────────────────────────
+  end note
+else (não — cold start)
+  :prior inalterado\n(sem dados aprendidos);
+end if
+
+:CISOOption[N] com probabilidades\najustadas pela experiência passada;
+
+|Convergência e feedback|
+:Hipótese classificada com\nprobabilidade ajustada;
+
+if (operador volta a confirmar\na mesma categoria?) then (sim)
+  :_counts reforçados\nefeito acumula ao longo do tempo;
+else (confirma categoria diferente?)
+  :_counts ajustados\nmodelo aprende nova preferência;
+end if
+
+:Loop contínuo de melhoria;
+stop
+@enduml

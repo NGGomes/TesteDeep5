@@ -1,0 +1,71 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 4 — Condições para Gerar Relatório
+' ═══════════════════════════════════════════════════════════════════
+
+
+!theme plain
+skinparam ArrowColor #64748b
+skinparam roundcorner 8
+skinparam defaultFontName Arial
+
+title Agent 1 — Condições para Gerar Relatório
+
+start
+
+partition "Confirmação da hipótese" {
+  split
+    :Operador confirma\nconfirm_by_operator();
+  split again
+    :Convergência normal\nprob ≥ 85% e alertas ≥ 3;
+  split again
+    :<b>Convergência rápida</b>\nprob ≥ 97% e alertas ≥ 1;
+  split again
+    :Timeout auto\nexpires_at_ms expirou;
+  end split
+
+  :Hipótese registada\nem _confirmed_hypotheses;
+}
+
+split
+  partition "Caminho 1 - trigger_report_now"{
+    note left  #white;line:white
+      <back:white>                       </back>
+    end note
+    :get_global_reporter() ≠ None\n(Agent 2 está a correr);
+    :label ∉ _processed_confirmations\n(não duplicado);
+    :LLM responde ≤ 120s\n(AGENT2_TIMEOUT_SECONDS);
+    :POST /ingest OK\n(SSE server responde);
+  }
+
+split again
+  partition "Caminho 2 - poll loop (cada 2s)" {
+    note left  #white;line:white
+      <back:white>                       </back>
+    end note
+    :reporter.run() activo;
+    :get_global_graph() ≠ None\n(Agent 1 registou o grafo);
+    :confirmações novas detectadas\n(since _last_processed_ms);
+    :label ∉ _processed_confirmations\n(deduplicação por label);
+  }
+end split
+
+
+:_generate_ciso_report()\nLLM + IoCs + assets + timeline;
+:_save_report() + _emit_report()\nPDF/LaTeX + SSE ciso_report;
+:Card em Intelligence Reports\nbadge ⏳ desaparece;
+
+stop
+
+note right
+  NÃO gerado se:
+  Agent 2 não corre
+  reporter = None
+  LLM timeout (>120s)
+  label já processado
+  graph = None
+  ——
+  Caminho 1 falha:
+  remove de _processed para retry no poll loop
+end note
+@enduml

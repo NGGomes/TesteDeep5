@@ -1,0 +1,145 @@
+' ═══════════════════════════════════════════════════════════════════
+' BACKEND — DIAGRAMA 1: CLASSES
+' ═══════════════════════════════════════════════════════════════════
+@startuml backend_classes
+!theme plain
+skinparam linetype ortho
+skinparam ranksep 120
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ClassBorderColor #94a3b8
+skinparam ClassBackgroundColor #f8fafc
+skinparam ClassHeaderBackgroundColor #e2e8f0
+skinparam ClassAttributeFontColor #334155
+skinparam ClassStereotypeFontColor #64748b
+skinparam ArrowColor #64748b
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f8fafc
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title FastAPI Backend — Diagrama de Classes
+
+package "app/core" {
+  class Settings <<pydantic BaseSettings>> {
+    + LLM_PROVIDER: str
+    + LLM_PROVIDER2: str
+    + OLLAMA_MODEL: str
+    + OLLAMA_BASE_URL: str
+    + ANTHROPIC_API_KEY: str
+    + ANTHROPIC_MODEL: str
+    + OPENAI_API_KEY: str
+    + LITELLM_MODEL2: str
+    + ACTIVE_LLM_MODEL: str
+    + NVD_API_KEY: str
+    + CVE_CACHE_TTL: int
+    + LLM_TIMEOUT_SECONDS: int
+    + API_TIMEOUT_SECONDS: int
+    + MAX_TOKENS_PER_REQUEST: int
+    --
+    - _resolve_active_model(): Settings
+  }
+}
+
+package "app/services" {
+  class LLMService <<module>> {
+    --
+    + {static} _call_llm(user_prompt): Tuple[str, str]
+    + {static} analyze_cve(cve_data, detail_level): str
+    + {static} analyze_siem_alert(alert_json, detail_level): str
+    + {static} chat(messages, context): str
+    - {static} _litellm_kwargs(): dict
+  }
+
+  class CVEService <<module>> {
+    - {static} CACHE_DIR: Path
+    - {static} NVD_BASE_URL: str
+    --
+    + {static} fetch_cve(cve_id): Optional[dict]
+    - {static} _parse_cve(raw): dict
+    - {static} _cache_path(cve_id): Path
+    - {static} _is_cache_valid(path): bool
+  }
+}
+
+package "app/api" {
+  class AnalysisRouter <<FastAPI APIRouter>> {
+    --
+    + POST /360 full_analysis(body)
+  }
+
+  class CVERouter <<FastAPI APIRouter>> {
+    --
+    + GET /{cve_id}/raw get_cve_raw(cve_id)
+    + GET /{cve_id}/analyze get_cve_analysis(cve_id, level)
+  }
+
+  class SIEMRouter <<FastAPI APIRouter>> {
+    --
+    + POST /analyze analyze_alert(body)
+    + GET /mock get_mock_alert()
+  }
+
+  class HealthRouter <<FastAPI APIRouter>> {
+    --
+    + GET /health health()
+  }
+}
+
+package "app/main.py" {
+  class FastAPIApp <<FastAPI>> {
+    --
+    + GET /health health()
+    + GET /api/config get_config()
+    + GET /api/agent2/reports get_reports()
+    + GET /api/agent1/reports get_a1_reports()
+    + GET /api/graph/state get_graph_state()
+    + POST /api/v1/analysis/cve ext_cve_analysis(body)
+    + POST /api/v1/analysis/siem ext_siem_analysis(body)
+    + POST /api/v1/analysis/chat ext_chat(body)
+  }
+}
+
+class FullAnalysisRequest <<pydantic BaseModel>> {
+  + cve_id: str
+  + alert: dict
+  + detail_level: str
+}
+
+class SIEMAlertRequest <<pydantic BaseModel>> {
+  + alert: dict
+  + detail_level: str
+}
+
+' Relations
+FastAPIApp *-- AnalysisRouter : include_router\n/api/v1/analysis
+FastAPIApp *-- CVERouter : include_router\n/api/v1/cve
+FastAPIApp *-- SIEMRouter : include_router\n/api/v1/siem
+FastAPIApp *-- HealthRouter : include_router\n/api/v1
+FastAPIApp ..> Settings : <<uses>> settings
+CVERouter ..> CVEService : <<uses>>
+CVERouter ..> LLMService : <<uses>>
+SIEMRouter ..> LLMService : <<uses>>
+AnalysisRouter ..> CVEService : <<uses>>
+AnalysisRouter ..> LLMService : <<uses>>
+LLMService ..> Settings : <<reads>>\nACTIVE_LLM_MODEL\nLLM_PROVIDER
+CVEService ..> Settings : <<reads>>\nAPI_TIMEOUT_SECONDS\nNVD_API_KEY
+
+note right of Settings
+  _resolve_active_model():
+  Lê LLM_PROVIDER2 (Agent 2)
+  → ACTIVE_LLM_MODEL
+  Agent 1 = "none" (rule-based)
+  Fonte: .env via pydantic-settings
+end note
+
+note right of CVEService
+  Cache em disco:
+  data/cve_cache/{CVE-ID}.json
+  TTL = CVE_CACHE_TTL (86400s)
+  NVD API key opcional
+end note
+@enduml

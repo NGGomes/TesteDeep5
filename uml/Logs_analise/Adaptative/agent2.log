@@ -1,0 +1,24 @@
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] [GraphReporter] latex_generator loaded OK
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] [GraphReporter] analyzers loaded OK
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] ============================================================
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] Agent 2 - Graph Reporter (Trigger-based)
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] Confirmation threshold: 0.85
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] Will generate reports when hypotheses are confirmed
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] ============================================================
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] Starting Graph Reporter...
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] Waiting for hypothesis confirmations from the graph
+2026-05-20 15:42:54 [INFO] [agent2.graph_reporter] Connected to Hypothesis Graph
+2026-05-20 15:45:15 [INFO] [agent2.graph_reporter] [Queue] Enqueued: Major Breach with Impact (auto)
+2026-05-20 15:45:15 [INFO] [agent2.graph_reporter] [Queue] Processing 1 pending report(s)
+2026-05-20 15:45:15 [INFO] [agent2.graph_reporter] [AlertLoader] Loaded 37 alerts from dataset_bounds.json
+2026-05-20 15:45:15 [INFO] [agent2.graph_reporter] [GraphReporter] Loaded 3/3 raw alerts for enrichment
+2026-05-20 15:45:15 [INFO] [agent2.graph_reporter] [GraphReporter] Enrichment: 3 assets, 0 CVEs, 2 IoCs
+2026-05-20 15:45:25 [INFO] [agent2.graph_reporter] [GraphReporter] LLM analysis complete. Provider: anthropic
+2026-05-20 15:45:25 [INFO] [agent2.graph_reporter] [GraphReporter] Generating CISO LaTeX → graph_report_20260520_154525_ciso.tex
+2026-05-20 15:45:25 [INFO] [agent2.graph_reporter] [GraphReporter] CISO LaTeX saved: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\reports\agent2\graph_report_20260520_154525_ciso.tex
+2026-05-20 15:45:25 [INFO] [agent2.graph_reporter] [GraphReporter] Generating SOC LaTeX → graph_report_20260520_154525_soc.tex
+2026-05-20 15:45:25 [INFO] [agent2.graph_reporter] [GraphReporter] SOC LaTeX saved: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\reports\agent2\graph_report_20260520_154525_soc.tex
+2026-05-20 15:45:25 [INFO] [agent2.graph_reporter] Report saved: graph_report_20260520_154525.json
+2026-05-20 15:45:27 [INFO] [agent2.graph_reporter] CISO report emitted to dashboard: 1 hypotheses
+2026-05-20 15:45:27 [INFO] [agent2.graph_reporter] [Queue] Completed: Major Breach with Impact
+2026-05-20 15:45:27 [INFO] [agent2.graph_reporter] [Queue] ✓ Report emitted: Major Breach with Impact

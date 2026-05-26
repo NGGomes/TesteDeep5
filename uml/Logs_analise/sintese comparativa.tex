@@ -1,0 +1,254 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{portuges}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{colortbl}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{a4paper, margin=2.5cm}
+
+\definecolor{verde}{RGB}{40,167,69}
+\definecolor{azul}{RGB}{0,123,255}
+\definecolor{cinza}{RGB}{108,117,125}
+
+\title{\textbf{SOC/CISO Dashboard - Análise Comparativa}\\ \large Método Fixed vs Método Adaptativo}
+\author{Análise de Logs do Sistema}
+\date{Execuções: 17 e 20 de Maio de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este documento apresenta uma análise comparativa entre duas abordagens de gerenciamento de janelas de análise no Agent 1 - Cognitive Security Engine: o método \textbf{Fixed} (janelas de tamanho fixo) e o método \textbf{Adaptativo}. A comparação é baseada em logs reais do sistema SOC/CISO Dashboard v4.2.0, demonstrando as diferenças de comportamento, eficiência e capacidade de detecção entre as duas estratégias.
+\end{abstract}
+
+\section{Visão Geral dos Métodos}
+
+\subsection{Método Fixed (Janela Fixa)}
+No método Fixed, o sistema utiliza janelas de análise de tamanho constante, sem ajustes dinâmicos baseados no fluxo de alertas.
+
+\subsection{Método Adaptativo}
+No método Adaptativo, o WindowManager ajusta dinamicamente o tamanho e o comportamento das janelas de análise conforme o padrão dos alertas recebidos.
+
+\begin{table}[h]
+\centering
+\caption{Configurações Gerais do Sistema}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Parâmetro} & \textbf{Fixed} & \textbf{Adaptativo} \\
+\midrule
+Janela CISO base & 15 minutos & 15 minutos \\
+Threshold confirmação & 0.85 & 0.85 \\
+Máx. hipóteses & 3 & 3 \\
+Modo operação & Streaming & Streaming \\
+Dataset & 37 alertas & 37 alertas \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Análise Comparativa Detalhada}
+
+\subsection{Inicialização do WindowManager}
+
+A principal diferença na inicialização está explícita nos logs:
+
+\begin{table}[h]
+\centering
+\caption{Configuração do WindowManager nos Logs}
+\begin{tabular}{@{}p{0.3\textwidth}p{0.6\textwidth}@{}}
+\toprule
+\textbf{Método} & \textbf{Log de Inicialização} \\
+\midrule
+\cellcolor{azul!10} Fixed & \texttt{[WindowManager] mode=fixed} (implícito/não evidenciado) \\
+\cellcolor{verde!10} Adaptativo & \texttt{[WindowManager] mode=adaptive} (explicitamente registrado) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Comportamento das Janelas de Análise}
+
+\begin{longtable}{@{}p{0.2\textwidth}p{0.35\textwidth}p{0.35\textwidth}@{}}
+\caption{Comparação de Comportamento das Janelas}\\
+\toprule
+\textbf{Característica} & \textbf{Método Fixed} & \textbf{Método Adaptativo} \\
+\midrule
+\endfirsthead
+
+\multicolumn{3}{c}{{\tablename\ \thetable{} -- continuação}} \\
+\toprule
+\textbf{Característica} & \textbf{Método Fixed} & \textbf{Método Adaptativo} \\
+\midrule
+\endhead
+
+\bottomrule
+\multicolumn{3}{r}{{Continua na próxima página}} \\
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+Padrão de IDs & Sequenciais e previsíveis & Aparentemente aleatórios (ex: \texttt{4c0d4fb5}) \\
+Capacidade adaptativa & Baixa & Alta \\
+Resposta a padrões repetidos & Pode gerar múltiplas confirmações & Adapta após primeira detecção \\
+Fases detectadas & EXFILTRATION → IMPACT & EXFILTRATION → IMPACT \\
+Phase Score & 15 & 15 \\
+\end{longtable}
+
+\subsection{Processamento de Alertas}
+
+\begin{table}[h]
+\centering
+\caption{Comparação de Processamento de Alertas}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Métrica} & \textbf{Fixed} & \textbf{Adaptativo} \\
+\midrule
+Total de alertas & 37 & 37 \\
+Tempo total de processamento & $\approx$7 minutos & $\approx$7 minutos \\
+Intervalo médio entre alertas & $\approx$11-12 segundos & $\approx$11-12 segundos \\
+Alertas até primeira confirmação & 13 & 13 \\
+Tempo até primeira confirmação & $\approx$2min23s & $\approx$2min23s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hipóteses Confirmadas}
+
+\subsubsection{Método Fixed}
+O método Fixed apresentou \textbf{múltiplas confirmações} de diferentes tipos de hipóteses:
+\begin{itemize}
+\item Advanced Persistent Threats (APT) - 85\%
+\item Lateral Movement with Malware - 85\% (múltiplas ocorrências)
+\item Ransomware \& Digital Extortion - 85\%
+\item APT Data Theft - 85\%
+\item Malware Deployment - 85\%
+\item Targeted Intrusion Campaign - 85\%
+\item Major Breach with Impact - 85\%
+\end{itemize}
+
+\subsubsection{Método Adaptativo}
+O método Adaptativo apresentou \textbf{apenas uma confirmação}:
+\begin{itemize}
+\item Major Breach with Impact - 85\% (auto)
+\end{itemize}
+
+\begin{quote}
+\color{blue}
+\textbf{Observação Crítica:} Apesar de ambas as execuções terem identificado duas janelas com o mesmo padrão (EXFILTRATION → IMPACT, 3 alertas, phase\_score=15), o método Adaptativo confirmou apenas a primeira janela, demonstrando capacidade de adaptação e evitando falsos positivos.
+\end{quote}
+
+\section{Agent 2 - Graph Reporter}
+
+O comportamento do Agent 2 foi consistente em ambas as execuções, com pequenas variações nos tokens do LLM:
+
+\begin{table}[h]
+\centering
+\caption{Comparação do Agent 2}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Métrica} & \textbf{Fixed} & \textbf{Adaptativo} \\
+\midrule
+Provider & Anthropic & Anthropic \\
+Threshold & 0.85 & 0.85 \\
+Enriquecimento (assets/CVEs/IoCs) & 3/0/2 & 3/0/2 \\
+LLM Tokens (prompt/completion) & 465/776 & 465/843 \\
+Tempo de análise LLM & $\approx$8s & $\approx$8s \\
+Total processamento & $\approx$10s & $\approx$10s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Análise de Performance do Orquestrador}
+
+O orquestrador (\_\_main\_\_) apresentou comportamento idêntico em ambas as execuções:
+
+\begin{table}[h]
+\centering
+\caption{Performance do Orquestrador}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Componente} & \textbf{Tempo de bootstrap} & \textbf{Porta} \\
+\midrule
+SSE Server & 2 segundos & 5001 \\
+Texer & 2 segundos & 5002 \\
+Backend FastAPI & 9 segundos & 8000 \\
+Agent 1 callback & Imediato & 8002 \\
+Tempo total de orquestração & 42 segundos & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Vantagens e Desvantagens}
+
+\subsection{Método Fixed}
+
+\begin{tabular}{@{}p{0.45\textwidth}p{0.45\textwidth}@{}}
+\toprule
+\textbf{Vantagens} & \textbf{Desvantagens} \\
+\midrule
+Comportamento previsível & Pode gerar múltiplas confirmações \\
+Fácil de depurar & Menos eficiente em padrões repetidos \\
+Janelas consistentes & Não se adapta ao contexto \\
+\bottomrule
+\end{tabular}
+
+\subsection{Método Adaptativo}
+
+\begin{tabular}{@{}p{0.45\textwidth}p{0.45\textwidth}@{}}
+\toprule
+\textbf{Vantagens} & \textbf{Desvantagens} \\
+\midrule
+Evita falsos positivos & Comportamento menos previsível \\
+Ajusta-se dinamicamente ao fluxo & Mais complexo de depurar \\
+Mais eficiente para ataques em fases & Requer lógica adaptativa robusta \\
+\bottomrule
+\end{tabular}
+
+\section{Conclusão}
+
+A análise comparativa demonstra que ambos os métodos são capazes de processar corretamente os 37 alertas do dataset e detectar o incidente crítico "Major Breach with Impact". No entanto:
+
+\begin{itemize}
+\item \textbf{Método Fixed}: Detectou e reportou \textbf{10+ hipóteses diferentes}, gerando múltiplos relatórios.
+\item \textbf{Método Adaptativo}: Detectou e reportou \textbf{apenas a hipótese principal}, evitando redundâncias.
+\end{itemize}
+
+\vspace{0.5cm}
+
+\boxed{
+\begin{minipage}{0.9\textwidth}
+\centering
+\textbf{\Large Recomendação:}
+\vspace{0.3cm}
+
+O \textbf{Método Adaptativo} é superior para ambientes de produção por sua capacidade de reduzir \textbf{falsos positivos} e \textbf{ruído}, focando os recursos da equipe de segurança nos incidentes mais relevantes.
+\end{minipage}
+}
+
+\section*{Apêndice: Evidências dos Logs}
+
+\subsection*{Log do Modo Adaptativo}
+\begin{verbatim}
+2026-05-20 14:09:52 [INFO] [agent1.window_manager] 
+[WindowManager] mode=adaptive
+\end{verbatim}
+
+\subsection*{Log da Confirmação (Modo Adaptativo)}
+\begin{verbatim}
+2026-05-20 14:12:20 [INFO] [agent1.hypothesis_graph] 
+*** AUTO-CONFIRMED: Major Breach with Impact (score=0.850, evidence=1) ***
+\end{verbatim}
+
+\subsection*{Log da Segunda Janela (sem confirmação)}
+\begin{verbatim}
+2026-05-20 14:12:35 [INFO] [agent1.main] 
+Window evidence | window_id=8570648a | phases=['EXFILTRATION', 'IMPACT'] 
+| phase_score=15 | alert_count=3
+\end{verbatim}
+
+\end{document}

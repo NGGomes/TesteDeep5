@@ -1,0 +1,930 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# CISO Intelligence Dashboard — Dataset de Cobertura Completa de Testes
+# Ficheiro: projE_data_analise
+#
+# ─── COMO O AGENTE 1 PROCESSA ESTE DATASET ───────────────────────────────────
+#
+# O Agente 1 NÃO produz um card por janela temporal. Produz um card por
+# CLUSTER de alertas, onde um cluster é definido pela combinação de:
+#   • categoria CISO primária (primary_ciso) do alerta âncora
+#   • janela de tempo deslizante (sliding window)
+#
+# Consequência directa: uma janela temporal com 16 alertas e 7 fases pode
+# gerar MÚLTIPLOS cards — um por categoria CISO dominante detectada —
+# todos com o score acumulado da janela no momento em que são emitidos.
+#
+# ─── MAPA DE FASES (correspondências exactas) ────────────────────────────────
+#
+#   (informationgathering, scanning|reconnaissance|osint)   → RECON            w=1
+#   (authentication, login|brute force|credential stuffing) → INITIAL_ACCESS   w=3
+#   (execution, script|command|powershell|malware)          → EXECUTION        w=4
+#   (lateral_movement, rdp|wmi)                             → LATERAL_MOVEMENT w=5
+#   (persistence, backdoor|registry)                        → PERSISTENCE      w=6
+#   (exfiltration, data|data leak)                          → EXFILTRATION     w=7
+#   (impact, ransomware|wiper|encryption|system)            → IMPACT           w=8
+#
+#   ATENÇÃO: Categorias fora deste mapa (ex: availability/ddos, other/compliance,
+#   malicioscode/cryptominer) NÃO produzem fase de kill chain pelo caminho
+#   principal. São processadas pelo mapeamento secundário via primary_ciso
+#   (keyword matching em Title/Tags/Description), gerando cards com a fase
+#   da categoria CISO mais próxima mapeada.
+#
+# ─── PHASE_TO_CISO_CATEGORY ──────────────────────────────────────────────────
+#
+#   RECON          → CISO-15
+#   INITIAL_ACCESS → CISO-4
+#   EXECUTION      → CISO-14
+#   PERSISTENCE    → CISO-5 (APT)
+#   LATERAL_MOVEMENT → CISO-5 (APT)
+#   EXFILTRATION   → CISO-3
+#   IMPACT         → CISO-1
+#
+#   Categorias CISO 2,6,7,8,9,10,11,12,13,16 são atingidas exclusivamente via
+#   primary_ciso (keyword matching). Quando activadas, o card usa a fase de
+#   kill chain do alerta que activou o keyword match.
+#
+# ─── SCORE → ESTADO CISO ─────────────────────────────────────────────────────
+#
+#   0          → RUIDO_OPERACIONAL   (Operational Noise)
+#   1–2        → RUIDO_OPERACIONAL   (apenas RECON; Operational Noise)
+#   3–5        → ATIVIDADE_SUSPEITA  (Suspicious Activity)
+#   6–9        → INCIDENTE_SEGURANCA (Security Incident)
+#   10–14      → INCIDENTE_GRAVE     (Serious Incident)
+#   ≥ 15       → RANSOMWARE_PROVAVEL (Critical Combined Attack)
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# WINDOW 1 — 08:00–08:35 — TODAS AS 7 FASES
+#
+# Esta janela gera MÚLTIPLOS cards no Agente 1, agrupados por categoria CISO:
+#   • Card APT (CISO-5): âncora W106 EXEC → inclui W107 LAT, W108 LAT, W109 PERS
+#     Score acumulado da janela no momento: 34 → RANSOMWARE_PROVAVEL
+#   • Card Credential (CISO-4): âncora W103 INIT → inclui W104 INIT, fases anteriores
+#     Score acumulado: 34 → RANSOMWARE_PROVAVEL
+#   • Card Ransomware (CISO-1): âncora W113 IMPACT → inclui W112 EXFIL, W110 PERS
+#     Score acumulado: 21 → RANSOMWARE_PROVAVEL
+#   • Card Data Exfiltration (CISO-3): âncora W111 EXFIL — score 7 → INCIDENTE_SEG
+#   • Card Info Manipulation (CISO-10): âncora W116 IMPACT — score 8 → INCIDENTE_SEG
+#
+# Alertas W101 e W102 saem como cards LOW/RECON/score 1 (RUIDO_OPERACIONAL)
+# porque são os primeiros da janela — score insuficiente no momento de emissão.
+# ═══════════════════════════════════════════════════════════════════════════════
+----------
+Number: W101
+TLP: amber
+ExternalId: WIN1-001
+Priority: low
+Severity: low
+Status: new
+Title: Nmap reconnaissance sweep — attacker mapping network topology
+Source: IDS
+Category: informationgathering
+Type: scanning
+Tags: scan, recon, reconnaissance, osint, nmap, topology_mapping
+MitreAttack: T1595
+AffectedAsset: 10.0.0.0/8
+Description: Comprehensive Nmap SYN scan from 198.51.100.72 covering all subnets. 65,536 hosts targeted, full port range. Pre-attack reconnaissance marking start of coordinated campaign. CISO-15: Reconnaissance & Pre-Attack Intelligence Gathering.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-recon
+SiemDetectionTime: 2026-04-24 08:00:00
+AssignedAt: 2026-04-24 08:00:00
+Assignee: userId=analyst01, groupId=SOC-L1
+----------
+Number: W102
+TLP: amber
+ExternalId: WIN1-002
+Priority: low
+Severity: low
+Status: new
+Title: OSINT employee enumeration via LinkedIn and careers page scraping — social engineering prep
+Source: WAF
+Category: informationgathering
+Type: osint
+Tags: osint, recon, scan, reconnaissance, linkedin, employee_enum, phishing_prep, social_engineering, bec
+MitreAttack: T1592
+AffectedAsset: www.corp.com
+Description: Automated Python-requests scraping employee names, roles and emails from careers page and LinkedIn. 5,200 requests in 10 minutes. 30 seconds after W101 — floating window trigger fires. Pre-phishing intelligence gathering. CISO-15: Reconnaissance. CISO-8: Social Engineering & BEC preparation.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-recon
+SiemDetectionTime: 2026-04-24 08:00:30
+AssignedAt: 2026-04-24 08:00:30
+Assignee: userId=analyst01, groupId=SOC-L1
+----------
+Number: W103
+TLP: amber
+ExternalId: WIN1-003
+Priority: high
+Severity: high
+Status: new
+Title: Kerberoasting — 52 SPN ticket requests for offline cracking — Initial Access
+Source: SIEM
+Category: authentication
+Type: login
+Tags: kerberoasting, authentication, login, spn, kerberos, credential, initial_access
+MitreAttack: T1558
+AffectedAsset: dc-ad01.corp.local
+Description: 52 Kerberos TGS service ticket requests from ws-dev-05 in 2 minutes. Classic Kerberoasting — offline hash cracking of service accounts imminent. CISO-4: Credential and Identity Compromise.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-authentication
+SiemDetectionTime: 2026-04-24 08:02:00
+AssignedAt: 2026-04-24 08:02:00
+Assignee: userId=analyst02, groupId=SOC-L2
+----------
+Number: W104
+TLP: red
+ExternalId: WIN1-004
+Priority: high
+Severity: high
+Status: new
+Title: MFA push bombing — 31 notifications to CFO — social engineering BEC
+Source: IDaaS
+Category: authentication
+Type: brute force
+Tags: mfa, bruteforce, authentication, phishing, bec, social_engineering, credential_stuffing
+MitreAttack: T1621
+AffectedAsset: cfo@corp.com
+Description: 31 MFA push notifications in 12 minutes targeting CFO account. Classic push bombing. CISO-8: Social Engineering, Phishing & BEC. CISO-4: Credential and Identity Compromise.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-authentication
+SiemDetectionTime: 2026-04-24 08:04:00
+AssignedAt: 2026-04-24 08:04:00
+Assignee: userId=analyst03, groupId=SOC-L2
+----------
+Number: W105
+TLP: red
+ExternalId: WIN1-005
+Priority: high
+Severity: high
+Status: new
+Title: Supply chain vendor VPN — tampered update package T1195
+Source: Proxy
+Category: execution
+Type: malware
+Tags: supply_chain, vendor, dependency_confusion, malware, execution, third_party, t1195
+MitreAttack: T1195
+AffectedAsset: vendor-vpn-gw.corp.local
+Description: Tampered software update acme-agent-2.4.1.msi delivered via authenticated vendor VPN. Package hash mismatch. 3 endpoints auto-installed malicious payload. Supply chain compromise via dependency confusion. CISO-6: Supply Chain & Third-Party Compromise.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-execution
+SiemDetectionTime: 2026-04-24 08:07:00
+AssignedAt: 2026-04-24 08:07:00
+Assignee: userId=analyst04, groupId=SOC-L3
+----------
+Number: W106
+TLP: red
+ExternalId: WIN1-006
+Priority: high
+Severity: high
+Status: new
+Title: PowerShell Empire C2 agent — beacon every 5s — APT nation-state TTP
+Source: EDR
+Category: execution
+Type: powershell
+Tags: powershell, execution, empire, c2, apt, nation_state, fileless, lotl, cobaltStrike
+MitreAttack: T1059
+AffectedAsset: ws-dev-05.corp.local
+Description: PowerShell Empire agent deployed via Base64 stager. Beacon to 104.21.66.99:443 every 5 seconds. Living-off-the-land fileless execution. APT29-consistent TTPs. CISO-5: Advanced Persistent Threats (APT). CISO-14: Malware Infrastructure.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-execution
+SiemDetectionTime: 2026-04-24 08:10:00
+AssignedAt: 2026-04-24 08:10:00
+Assignee: userId=analyst05, groupId=CSIRT-PT
+----------
+Number: W107
+TLP: red
+ExternalId: WIN1-007
+Priority: critical
+Severity: high
+Status: new
+Title: WMI lateral movement to domain controller — APT post-exploitation
+Source: Sysmon
+Category: lateral_movement
+Type: wmi
+Tags: wmi, lateral, lateralmovement, apt, nation_state, state_sponsored, rdp, pivot
+MitreAttack: T1047
+AffectedAsset: dc-ad01.corp.local
+Description: WMI remote execution from ws-dev-05 to dc-ad01 and 14 workstations simultaneously. Living-off-the-land lateral movement. APT29 Cozy Bear TTP. Followed immediately by RDP pivot (W108). 45s pair with W108 — floating window. CISO-5: APT.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-lateralmovement
+SiemDetectionTime: 2026-04-24 08:14:00
+AssignedAt: 2026-04-24 08:14:00
+Assignee: userId=analyst05, groupId=CSIRT-PT
+----------
+Number: W108
+TLP: red
+ExternalId: WIN1-008
+Priority: critical
+Severity: high
+Status: new
+Title: RDP lateral movement — DA account pivoting to 18 servers — 45s after W107
+Source: SIEM
+Category: lateral_movement
+Type: rdp
+Tags: rdp, lateral, lateralmovement, pivot, apt, insider, da_account
+MitreAttack: T1021
+AffectedAsset: srv-finance-02.corp.local
+Description: Domain admin DA-svc01 authenticated via RDP to 18 servers in 90 seconds from dc-ad01. 45 seconds after W107 WMI activity — floating window trigger. CISO-5: APT. CISO-11: Insider Threats.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-lateralmovement
+SiemDetectionTime: 2026-04-24 08:14:45
+AssignedAt: 2026-04-24 08:14:45
+Assignee: userId=analyst06, groupId=CSIRT-PT
+----------
+Number: W109
+TLP: red
+ExternalId: WIN1-009
+Priority: critical
+Severity: high
+Status: new
+Title: Golden Ticket — krbtgt hash forged TGT 10-year validity — APT persistence
+Source: SIEM
+Category: persistence
+Type: backdoor
+Tags: persistence, goldenticket, kerberos, backdoor, apt, state_sponsored, krbtgt, permanent
+MitreAttack: T1558
+AffectedAsset: dc-ad01.corp.local
+Description: Golden Ticket attack — forged TGT using krbtgt hash, 10-year validity. Permanent DC-level access. APT hallmark persistence mechanism. CISO-5: APT. CISO-11: Insider Threats (privileged account abuse).
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-persistence
+SiemDetectionTime: 2026-04-24 08:17:00
+AssignedAt: 2026-04-24 08:17:00
+Assignee: userId=analyst07, groupId=CSIRT-PT
+----------
+Number: W110
+TLP: red
+ExternalId: WIN1-010
+Priority: critical
+Severity: critical
+Status: new
+Title: Registry Run key persistence — COM hijack — regulatory NIS2 GDPR breach
+Source: Sysmon
+Category: persistence
+Type: registry
+Tags: persistence, registry, runkey, comhijack, nis2, gdpr, dora, compliance, regulatory, insider
+MitreAttack: T1547
+AffectedAsset: srv-finance-01.corp.local
+Description: HKCU\Run\WinUpdate registry key pointing to malicious payload. COM object hijacked for fileless persistence. NIS2 Art.23 notification obligation triggered. GDPR Art.33 72h notification required. CISO-12: Regulatory & Compliance Violations. CISO-11: Insider.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-persistence
+SiemDetectionTime: 2026-04-24 08:19:00
+AssignedAt: 2026-04-24 08:19:00
+Assignee: userId=analyst07, groupId=CSIRT-PT
+----------
+Number: W111
+TLP: red
+ExternalId: WIN1-011
+Priority: critical
+Severity: critical
+Status: new
+Title: DNS tunnelling exfiltration — 9.2GB AD dump — corporate espionage
+Source: DNS
+Category: exfiltration
+Type: data
+Tags: exfiltration, data, dnstunnel, corporate_espionage, spyware, breach, infostealer, rat
+MitreAttack: T1048
+AffectedAsset: dc-ad01.corp.local
+Description: iodine DNS tunnelling exfiltrating full AD database dump to ns1.attacker-domain.com. 9.2GB of credential data transferred. Corporate espionage — nation-state level data theft. 60s pair with W112 — floating window. CISO-3: Data Exfiltration & Corporate Espionage.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-exfiltration
+SiemDetectionTime: 2026-04-24 08:22:00
+AssignedAt: 2026-04-24 08:22:00
+Assignee: userId=analyst08, groupId=CSIRT-PT
+----------
+Number: W112
+TLP: red
+ExternalId: WIN1-012
+Priority: critical
+Severity: critical
+Status: new
+Title: HTTPS bulk exfiltration — 4.7GB HR salary data — 60s after W111
+Source: DLP
+Category: exfiltration
+Type: data leak
+Tags: exfiltration, dataleak, data_breach, spyware, infostealer, gdpr, double_extortion, ransomware
+MitreAttack: T1041
+AffectedAsset: srv-hr-01.corp.local
+Description: 4.7GB HR payroll and salary files via HTTPS to Mega.nz. Staged data exfiltration for double-extortion ransomware model. GDPR Art.33 personal data breach. 60 seconds after W111 — floating window. CISO-3: Data Exfiltration. CISO-1: Ransomware (double extortion).
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-exfiltration
+SiemDetectionTime: 2026-04-24 08:23:00
+AssignedAt: 2026-04-24 08:23:00
+Assignee: userId=analyst08, groupId=CSIRT-PT
+----------
+Number: W113
+TLP: red
+ExternalId: WIN1-013
+Priority: critical
+Severity: critical
+Status: new
+Title: LockBit 3.0 mass encryption — 47,000 files — ransom demand 2.4M EUR
+Source: EDR
+Category: impact
+Type: ransomware
+Tags: ransomware, encrypt, lockout, lockbit, extort, digital_extortion, cryptolocker
+MitreAttack: T1486
+AffectedAsset: srv-files-01.corp.local
+Description: LockBit 3.0 encrypting srv-files-01 HR Finance Legal shares — 47,000 files in 90 seconds. Ransom demand: 2.4M EUR in Monero. CISO-1: Ransomware & Digital Extortion.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-ransomware
+SiemDetectionTime: 2026-04-24 08:26:00
+AssignedAt: 2026-04-24 08:26:00
+Assignee: userId=analyst01, groupId=CSIRT-PT
+----------
+Number: W114
+TLP: red
+ExternalId: WIN1-014
+Priority: critical
+Severity: critical
+Status: new
+Title: Disk wiper deployed on backup servers — destructive sabotage T1485
+Source: Sysmon
+Category: impact
+Type: wiper
+Tags: wiper, destructive, sabotage, wipeware, disk_destruction, backup_destruction
+MitreAttack: T1485
+AffectedAsset: backup-srv-01.corp.local
+Description: dd.exe and cipher.exe run with overwrite flags on backup-srv-01 and backup-srv-02. All backup catalogues corrupted. Destructive wiper malware following ransomware. CISO-2: Destructive Operations & Wipeware. CISO-1: Ransomware.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-sabotage
+SiemDetectionTime: 2026-04-24 08:29:00
+AssignedAt: 2026-04-24 08:29:00
+Assignee: userId=analyst02, groupId=CSIRT-PT
+----------
+Number: W115
+TLP: red
+ExternalId: WIN1-015
+Priority: critical
+Severity: critical
+Status: new
+Title: VSS shadow copy deletion and DDoS flood launched simultaneously
+Source: Sysmon
+Category: impact
+Type: encryption
+Tags: ransomware, encrypt, vss, shadowcopy, ddos, denial_of_service, flood, availability
+MitreAttack: T1490
+AffectedAsset: ALL-CORP-SERVERS
+Description: vssadmin delete shadows /all destroys recovery points. Simultaneous volumetric UDP DDoS flood 52 Gbps. CISO-1: Ransomware. CISO-7: Critical Service Disruption (DDoS).
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-ransomware
+SiemDetectionTime: 2026-04-24 08:32:00
+AssignedAt: 2026-04-24 08:32:00
+Assignee: userId=analyst03, groupId=CSIRT-PT
+----------
+Number: W116
+TLP: red
+ExternalId: WIN1-016
+Priority: critical
+Severity: critical
+Status: new
+Title: Website defacement and CRM integrity violation — 1,247 records altered
+Source: WAF
+Category: impact
+Type: system
+Tags: integrity, manipulation, defacement, disinformation, database_tampering, crm_manipulation
+MitreAttack: T1491
+AffectedAsset: www.corp.com
+Description: Public website defaced with attacker message. 1,247 customer CRM records modified without authorisation. CISO-10: Information Manipulation & Integrity Attacks.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-integrity
+SiemDetectionTime: 2026-04-24 08:35:00
+AssignedAt: 2026-04-24 08:35:00
+Assignee: userId=analyst04, groupId=CSIRT-PT
+----------
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WINDOW 2 — 10:00–10:20 — INIT+EXEC+LATERAL — Score acumulado=12 — INCIDENTE_GRAVE
+#
+# Output real do Agente 1:
+#   • Card Vuln Exploit (CISO-9): W201 EXEC + W205 LAT → score 12 → INCIDENTE_GRAVE
+#   • Card Credential (CISO-4): W202 INIT — score 3 → ATIVIDADE_SUSPEITA (card isolado)
+#   • Card Botnet/C2 (CISO-14): W204 EXEC — score 4 → ATIVIDADE_SUSPEITA (card isolado)
+#   • Card APT (CISO-5): W206 LAT — score 5 → ATIVIDADE_SUSPEITA (card HIGH/Serious)
+#
+# NOTA: W203 (XMRig cryptominer) — Category: execution / Type: command —
+#   é mapeado como EXECUTION (w=4) e agrupado no cluster Vuln Exploit via
+#   keyword "cryptojacking/xmrig" → CISO-13. Score contribui para cluster W201.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+----------
+Number: W201
+TLP: amber
+ExternalId: WIN2-001
+Priority: high
+Severity: high
+Status: new
+Title: CVE-2026-1234 exploitation — Apache Struts RCE — web shell deployed
+Source: WAF
+Category: execution
+Type: malware
+Tags: exploit, cve, vulnerability, zero-day, rce, webshell, sql_injection, xss, t1190
+MitreAttack: T1190
+AffectedAsset: api-gateway.corp.com
+Description: Remote code execution exploit targeting CVE-2026-1234 (Apache Struts 2.5.33 CVSS 9.8). WAF blocked 847 attempts, 3 succeeded. Web shell api.php deployed. Zero-day exploitation. CISO-9: System & Application Vulnerability Exploitation. CISO-14: Malware Infrastructure.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-exploit
+SiemDetectionTime: 2026-04-24 10:00:00
+AssignedAt: 2026-04-24 10:00:00
+Assignee: userId=analyst05, groupId=VulnMgmt
+----------
+Number: W202
+TLP: amber
+ExternalId: WIN2-002
+Priority: high
+Severity: high
+Status: new
+Title: Credential stuffing after CVE exploitation — brute force service accounts
+Source: SIEM
+Category: authentication
+Type: credential stuffing
+Tags: credentialstuffing, authentication, bruteforce, post_exploit, initial_access, credential
+MitreAttack: T1110
+AffectedAsset: api-gateway.corp.com
+Description: Following web shell deployment (W201), attacker used credential stuffing with 8,500 stolen credentials against internal services. 12 valid accounts found. CISO-4: Credential & Identity Compromise.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-authentication
+SiemDetectionTime: 2026-04-24 10:03:00
+AssignedAt: 2026-04-24 10:03:00
+Assignee: userId=analyst06, groupId=SOC-L2
+----------
+Number: W203
+TLP: amber
+ExternalId: WIN2-003
+Priority: high
+Severity: high
+Status: new
+Title: XMRig cryptominer injected into Node.js worker — cryptojacking resource hijacking T1496
+Source: EDR
+Category: execution
+Type: command
+Tags: cryptominer, cryptojacking, xmrig, resource_abuse, monero, unauthorized_resources, t1496, unauthorized_mining
+MitreAttack: T1496
+AffectedAsset: cloud-vm-prod-14.corp.cloud
+Description: XMRig Monero miner injected into legitimate node.js worker process on cloud VM. CPU 97% sustained. Outbound connections to pool.minexmr.com:3333. Unauthorized use of cloud compute resources — cryptojacking confirmed. CISO-13: Cryptojacking & Unauthorized Resource Abuse. Category execution/command → EXECUTION phase (w=4).
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-cryptojacking
+SiemDetectionTime: 2026-04-24 10:06:00
+AssignedAt: 2026-04-24 10:06:00
+Assignee: userId=analyst07, groupId=SOC-L1
+----------
+Number: W204
+TLP: amber
+ExternalId: WIN2-004
+Priority: medium
+Severity: medium
+Status: new
+Title: Cobalt Strike C2 beacon — botnet infrastructure — loader malware
+Source: Firewall
+Category: execution
+Type: script
+Tags: c2, botnet, beacon, cobaltStrike, command_and_control, loader, generic_malware, t1071
+MitreAttack: T1071
+AffectedAsset: ws-dev-03.corp.local
+Description: Periodic HTTPS beacon every 60s from ws-dev-03 to known Cobalt Strike C2. Botnet infrastructure communication. CISO-14: Malware Infrastructure & Botnet Activity.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-malware
+SiemDetectionTime: 2026-04-24 10:09:00
+AssignedAt: 2026-04-24 10:09:00
+Assignee: userId=analyst08, groupId=SOC-L2
+----------
+Number: W205
+TLP: red
+ExternalId: WIN2-005
+Priority: high
+Severity: high
+Status: new
+Title: WMI lateral movement post-exploitation from compromised API gateway
+Source: Sysmon
+Category: lateral_movement
+Type: wmi
+Tags: wmi, lateral, lateralmovement, post_exploit, pivot
+MitreAttack: T1047
+AffectedAsset: srv-app-01.corp.local
+Description: WMI remote process creation from compromised api-gateway to srv-app-01 and srv-db-01. Attacker pivoting post-CVE exploitation.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-lateralmovement
+SiemDetectionTime: 2026-04-24 10:13:00
+AssignedAt: 2026-04-24 10:13:00
+Assignee: userId=analyst01, groupId=CSIRT-PT
+----------
+Number: W206
+TLP: red
+ExternalId: WIN2-006
+Priority: high
+Severity: high
+Status: new
+Title: RDP pivot to database servers — data access phase
+Source: SIEM
+Category: lateral_movement
+Type: rdp
+Tags: rdp, lateral, lateralmovement, database, data_access, apt
+MitreAttack: T1021
+AffectedAsset: srv-db-01.corp.local
+Description: RDP authentication to srv-db-01, srv-db-02 from compromised srv-app-01. Attacker accessing database layer post-application server pivot. CISO-5: APT lateral movement.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-lateralmovement
+SiemDetectionTime: 2026-04-24 10:17:00
+AssignedAt: 2026-04-24 10:17:00
+Assignee: userId=analyst02, groupId=CSIRT-PT
+----------
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WINDOW 3 — 12:00–12:12 — RECON+INIT
+#
+# Output real do Agente 1:
+#   • W301 saiu como card LOW/RECON/score 1 (RUIDO_OPERACIONAL) — isolado.
+#     Razão: W301 é o primeiro alerta desta janela; score no momento = 1.
+#   • W302+W303+W304 agrupados: score 4 → ATIVIDADE_SUSPEITA
+#     Card âncora: W302 (INIT via authentication/brute force)
+#     Categoria primária: CISO-8 (BEC/phishing keywords) e CISO-4 (credential)
+#
+# NOTA: W301 (DNS AXFR) não foi agrupado com W302 (BEC). Para que W301 produza
+# um card ATIVIDADE_SUSPEITA em conjunto com W302, o intervalo temporal entre
+# eles deve cair dentro da janela deslizante do motor. O intervalo de 4 minutos
+# parece ser suficiente, mas o Agente 1 emitiu W301 como card separado com o
+# score do momento (apenas RECON = 1). Comportamento confirmado no output real.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+----------
+Number: W301
+TLP: green
+ExternalId: WIN3-001
+Priority: low
+Severity: low
+Status: new
+Title: DNS zone transfer attempt — internal naming structure enumeration
+Source: DNS
+Category: informationgathering
+Type: reconnaissance
+Tags: recon, dns, reconnaissance, osint, axfr, enumeration
+MitreAttack: T1590
+AffectedAsset: dns-ext-01.corp.local
+Description: AXFR zone transfer request from 203.0.113.11 rejected by primary DNS. Attacker mapping internal naming structure. Pre-phishing intelligence gathering. CISO-15: Reconnaissance. CISO-8: precursor a phishing/BEC.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-recon
+SiemDetectionTime: 2026-04-24 12:00:00
+AssignedAt: 2026-04-24 12:00:00
+Assignee: userId=analyst03, groupId=SOC-L1
+----------
+Number: W302
+TLP: amber
+ExternalId: WIN3-002
+Priority: medium
+Severity: medium
+Status: new
+Title: Spear-phishing BEC email — CFO impersonation for wire transfer
+Source: EmailGateway
+Category: authentication
+Type: brute force
+Tags: phishing, bec, spear_phishing, social_engineering, vishing, impersonation, bruteforce
+MitreAttack: T1566
+AffectedAsset: finance@corp.com
+Description: Targeted spear-phishing email impersonating CFO requesting urgent 285,000 EUR wire transfer. BEC (Business Email Compromise) social engineering attack. CISO-8: Social Engineering, Phishing & BEC. CISO-4: Credential.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-phishing
+SiemDetectionTime: 2026-04-24 12:04:00
+AssignedAt: 2026-04-24 12:04:00
+Assignee: userId=analyst04, groupId=SOC-L2
+----------
+Number: W303
+TLP: amber
+ExternalId: WIN3-003
+Priority: medium
+Severity: medium
+Status: new
+Title: SSH brute force — 640 failures targeting finance service accounts
+Source: SIEM
+Category: authentication
+Type: login
+Tags: bruteforce, ssh, authentication, login, credential, initial_access, ransomware
+MitreAttack: T1110
+AffectedAsset: bastion-01.corp.local
+Description: 640 failed SSH logins from 45.33.32.156 against svc_finance, svc_payroll, svc_hr accounts. Account lockout triggered. CISO-4: Credential & Identity Compromise.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-authentication
+SiemDetectionTime: 2026-04-24 12:08:00
+AssignedAt: 2026-04-24 12:08:00
+Assignee: userId=analyst05, groupId=SOC-L2
+----------
+Number: W304
+TLP: amber
+ExternalId: WIN3-004
+Priority: medium
+Severity: medium
+Status: new
+Title: VPN credential stuffing — 2,100 attempts — 5 valid credentials confirmed
+Source: VPN-GW
+Category: authentication
+Type: credential stuffing
+Tags: credentialstuffing, vpn, authentication, initial_access, credential
+MitreAttack: T1110
+AffectedAsset: vpn-gw-01.corp.local
+Description: Credential stuffing using Collection #6 breach list against VPN gateway. 2,100 attempts from 11 rotating IPs. 5 valid credentials confirmed. CISO-4: Credential.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-authentication
+SiemDetectionTime: 2026-04-24 12:12:00
+AssignedAt: 2026-04-24 12:12:00
+Assignee: userId=analyst06, groupId=SOC-L2
+----------
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WINDOW 4 — 14:00–14:02 — RECON only — Score=1 — RUIDO_OPERACIONAL
+#
+# Output real do Agente 1:
+#   • W401: card LOW/RECON/score 1 — RUIDO_OPERACIONAL ✓
+#   • W402: card LOW/RECON/score 1 — RUIDO_OPERACIONAL ✓
+# ═══════════════════════════════════════════════════════════════════════════════
+
+----------
+Number: W401
+TLP: white
+ExternalId: WIN4-001
+Priority: info
+Severity: low
+Status: new
+Title: External port scan — 256 ports — perimeter reconnaissance
+Source: IDS
+Category: informationgathering
+Type: scanning
+Tags: scan, recon, low, ids, port_scan, perimeter
+MitreAttack: T1595
+AffectedAsset: fw-ext-01.corp.local
+Description: Nmap SYN scan from 203.0.113.99. 256 common ports tested. No successful connections. CISO-15: Reconnaissance — score=1 → RUIDO_OPERACIONAL.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-recon
+SiemDetectionTime: 2026-04-24 14:00:00
+AssignedAt: 2026-04-24 14:00:00
+Assignee: userId=analyst07, groupId=SOC-L1
+----------
+Number: W402
+TLP: white
+ExternalId: WIN4-002
+Priority: info
+Severity: low
+Status: new
+Title: Web crawler indexing public site — Googlebot mimicry
+Source: WAF
+Category: informationgathering
+Type: osint
+Tags: osint, scan, recon, crawler, googlebot, web_scraping
+MitreAttack: T1592
+AffectedAsset: www.corp.com
+Description: Automated web crawler mimicking Googlebot user-agent scraping public pages. 890 requests in 15 minutes. No authentication bypass attempts. CISO-15: Reconnaissance — score=1 → RUIDO_OPERACIONAL.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-recon
+SiemDetectionTime: 2026-04-24 14:02:00
+AssignedAt: 2026-04-24 14:02:00
+Assignee: userId=analyst07, groupId=SOC-L1
+----------
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WINDOW 5 — 15:00–15:10 — Alertas de cobertura complementar de categorias CISO
+#
+# CORRECÇÃO APLICADA vs. versão original:
+#   W502: Category alterada de "availability" para "impact", Type de "ddos" para
+#         "system" — "availability/ddos" não existe no PHASE MAP; o Agente 1
+#         mapeava-o via primary_ciso keyword produzindo IMPACT. Forçar IMPACT
+#         directamente garante mapeamento determinístico.
+#   W504: Category mantida como "other", Type como "compliance" — não está no
+#         PHASE MAP mas é processado via primary_ciso keyword "compliance/nis2/gdpr".
+#         O Agente 1 produz EXECUTION (score 4) via keyword match. Comportamento
+#         documentado e aceite.
+#   W505: Category alterada de "malicioscode" para "execution", Type de
+#         "cryptominer" para "malware" — "malicioscode/cryptominer" não existe no
+#         PHASE MAP. Com execution/malware → EXECUTION (w=4) garantido.
+#
+# Output real do Agente 1 para WIN-5 (alertas processados individualmente):
+#   • W501: card CRITICAL/IMPACT/score 8 → INCIDENTE_SEGURANCA ✓
+#   • W502: card HIGH/IMPACT/score 8 → INCIDENTE_SEGURANCA ✓ (após correcção)
+#   • W503: card HIGH/PERS/score 6 → INCIDENTE_SEGURANCA ✓
+#   • W504: card MEDIUM/EXEC/score 4 → ATIVIDADE_SUSPEITA ✓
+#   • W505: card MEDIUM/EXEC/score 4 → ATIVIDADE_SUSPEITA ✓ (após correcção)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+----------
+Number: W501
+TLP: red
+ExternalId: WIN5-001
+Priority: critical
+Severity: critical
+Status: new
+Title: Destructive disk wiper deployed — wipeware sabotage on backup infrastructure
+Source: Sysmon
+Category: impact
+Type: wiper
+Tags: wiper, destructive, sabotage, wipeware, disk_destruction, t1485, backup_wipe
+MitreAttack: T1485
+AffectedAsset: backup-srv-01.corp.local
+Description: dd.exe executed with overwrite flags destroying all backup data on backup-srv-01. Wipeware confirmed — irrecoverable data destruction. CISO-2: Destructive Operations and Wipeware. CISO-1: Ransomware (kill chain impact phase).
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-wipeware
+SiemDetectionTime: 2026-04-24 15:00:00
+AssignedAt: 2026-04-24 15:00:00
+Assignee: userId=analyst01, groupId=CSIRT-PT
+----------
+Number: W502
+TLP: amber
+ExternalId: WIN5-002
+Priority: high
+Severity: high
+Status: new
+Title: Volumetric DDoS flood — 48 Gbps UDP amplification — denial of service — critical service disruption
+Source: ISP-Feed
+Category: impact
+Type: system
+Tags: ddos, denial_of_service, flood, volumetric, amplification, udp_flood, t1498, critical_service_disruption
+MitreAttack: T1498
+AffectedAsset: web-portal.corp.com
+Description: Volumetric UDP amplification DDoS flood at 48 Gbps targeting web-portal.corp.com. Known Mirai variant botnet. CDN mitigation partially effective — portal response time 18 seconds. Critical service disruption confirmed. CISO-7: Critical Service Disruption DDoS. Category impact/system → IMPACT phase (w=8) garantido pelo PHASE MAP.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-ddos
+SiemDetectionTime: 2026-04-24 15:02:00
+AssignedAt: 2026-04-24 15:02:00
+Assignee: userId=analyst02, groupId=SOC-L2
+----------
+Number: W503
+TLP: amber
+ExternalId: WIN5-003
+Priority: medium
+Severity: medium
+Status: new
+Title: Insider threat — privileged account abuse after hours — unauthorized access
+Source: SIEM
+Category: persistence
+Type: backdoor
+Tags: insider, disgruntled, unauthorized_access, privileged_account_abuse, after_hours, t1078, after-hours
+MitreAttack: T1078
+AffectedAsset: hr-fileserver.corp.local
+Description: Domain admin svc_backup accessed 3,400 HR salary files at 02:14 AM from non-standard workstation. Classic insider threat — disgruntled employee or compromised service account abusing privilege after hours. CISO-11: Insider Threats and Physical Security Breaches. Category persistence/backdoor → PERSISTENCE phase (w=6).
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-insider
+SiemDetectionTime: 2026-04-24 15:04:00
+AssignedAt: 2026-04-24 15:04:00
+Assignee: userId=analyst03, groupId=SOC-L3
+----------
+Number: W504
+TLP: green
+ExternalId: WIN5-004
+Priority: medium
+Severity: medium
+Status: new
+Title: NIS2 and GDPR compliance violation — missing breach notification audit finding
+Source: GRC-Tool
+Category: other
+Type: compliance
+Tags: compliance, regulatory, nis2, gdpr, dora, audit_finding, breach_notification, t1562
+MitreAttack: T1562
+AffectedAsset: compliance-portal.corp.local
+Description: GRC audit detected 3 security events missing from NIS2 Art.23 incident register. GDPR Art.33 notification register also incomplete. DORA Art.17 assessment not filed. CISO-12: Regulatory and Compliance Violations. NOTA: category=other/compliance nao está no PHASE MAP — processado via primary_ciso keyword "compliance/nis2/gdpr" → Agente 1 produz EXECUTION (score 4) via keyword match. Comportamento aceite.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-compliance
+SiemDetectionTime: 2026-04-24 15:06:00
+AssignedAt: 2026-04-24 15:06:00
+Assignee: userId=analyst04, groupId=SOC-L1
+----------
+Number: W505
+TLP: green
+ExternalId: WIN5-005
+Priority: low
+Severity: low
+Status: new
+Title: XMRig cryptominer — cryptojacking resource hijacking on cloud VM
+Source: EDR
+Category: execution
+Type: malware
+Tags: cryptominer, cryptojacking, xmrig, monero, resource_hijacking, resource_abuse, t1496, unauthorized_mining
+MitreAttack: T1496
+AffectedAsset: cloud-vm-prod-14.corp.cloud
+Description: XMRig Monero cryptominer injected into node.js worker process. CPU 97% for 6 hours. Outbound pool.minexmr.com:3333. Unauthorized use of cloud compute resources — cryptojacking confirmed. CISO-13: Cryptojacking and Unauthorized Resource Abuse. Category execution/malware → EXECUTION phase (w=4) garantido pelo PHASE MAP.
+Resolution:
+IsNoiseAlert: false
+UseCaseTag: ENISA-cryptojacking
+SiemDetectionTime: 2026-04-24 15:08:00
+AssignedAt: 2026-04-24 15:08:00
+Assignee: userId=analyst05, groupId=SOC-L1
+----------
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOISE ALERTS — 18:00–19:00
+# Testa ambos os caminhos de descarte — output real: card LOW/Others/score 0 ✓
+# ═══════════════════════════════════════════════════════════════════════════════
+
+----------
+Number: N101
+TLP: white
+ExternalId: NOISE-001
+Priority: info
+Severity: low
+Status: closed
+Title: Authorised Nessus vulnerability scan — change ticket CHG-2026-0501
+Source: IDS
+Category: informationgathering
+Type: scanning
+Tags: scan, recon, authorised, nessus, change_management, false_positive
+MitreAttack:
+AffectedAsset: 10.10.0.0/24
+Description: Weekly authorised Nessus scan triggering IDS RECON signatures. Change management ticket CHG-2026-0501 confirmed. No threat. Resolution=falsepositive → alerta descartado pelo Agente 1.
+Resolution: falsepositive
+IsNoiseAlert: false
+UseCaseTag: ENISA-noise
+SiemDetectionTime: 2026-04-24 18:00:00
+ClosedAt: 2026-04-24 18:05:00
+AssignedAt: 2026-04-24 18:00:00
+Assignee: userId=analyst08, groupId=SOC-L1
+----------
+Number: N102
+TLP: white
+ExternalId: NOISE-002
+Priority: info
+Severity: low
+Status: closed
+Title: AV false positive — Sysinternals PsExec flagged as Hacktool
+Source: AV-Console
+Category: execution
+Type: malware
+Tags: falsepositive, psexec, sysinternals, av, legitimate_admin
+MitreAttack:
+AffectedAsset: ws-it-admin-01.corp.local
+Description: AV flagged PsExec.exe as Hacktool. IT team confirmed legitimate use. Whitelisted. Resolution=falsepositive → descartado.
+Resolution: falsepositive
+IsNoiseAlert: false
+UseCaseTag: ENISA-noise
+SiemDetectionTime: 2026-04-24 18:15:00
+ClosedAt: 2026-04-24 18:20:00
+AssignedAt: 2026-04-24 18:15:00
+Assignee: userId=analyst08, groupId=SOC-L1
+----------
+Number: N103
+TLP: white
+ExternalId: NOISE-003
+Priority: info
+Severity: low
+Status: closed
+Title: Nightly backup SFTP transfer — scheduled legitimate offsite backup
+Source: SIEM
+Category: exfiltration
+Type: data
+Tags: backup, scheduled, legitimate, offsite, false_positive, noise
+MitreAttack:
+AffectedAsset: backup-srv-01.corp.local
+Description: Nightly backup SFTP to offsite provider 198.51.100.90. 120GB as scheduled. IsNoiseAlert=true → descartado.
+Resolution:
+IsNoiseAlert: true
+UseCaseTag: ENISA-noise
+SiemDetectionTime: 2026-04-24 18:30:00
+ClosedAt: 2026-04-24 18:45:00
+AssignedAt: 2026-04-24 18:30:00
+Assignee: userId=analyst01, groupId=SOC-L1
+----------
+Number: N104
+TLP: white
+ExternalId: NOISE-004
+Priority: info
+Severity: low
+Status: closed
+Title: Monitoring agent heartbeat — Datadog baseline network noise
+Source: SIEM
+Category: informationgathering
+Type: scanning
+Tags: monitoring, datadog, baseline, agent, noise, false_positive
+MitreAttack:
+AffectedAsset: all-corp-endpoints
+Description: Datadog monitoring agent health checks generating RECON-like scan pattern. 4,000 events/hour from known agent IPs. IsNoiseAlert=true → descartado.
+Resolution:
+IsNoiseAlert: true
+UseCaseTag: ENISA-noise
+SiemDetectionTime: 2026-04-24 18:47:00
+ClosedAt: 2026-04-24 18:52:00
+AssignedAt: 2026-04-24 18:47:00
+Assignee: userId=analyst01, groupId=SOC-L1
+----------

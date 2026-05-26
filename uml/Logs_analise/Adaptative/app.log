@@ -1,0 +1,60 @@
+2026-05-20 15:41:12 [INFO] [__main__] Directories verified/created
+2026-05-20 15:41:12 [INFO] [__main__] Found Agent 1 at: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\agent1\main.py
+2026-05-20 15:41:12 [INFO] [__main__] Found Agent 2 (Graph Reporter) at: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\agent2\graph_reporter.py
+2026-05-20 15:41:20 [WARNING] [__main__] SSE server not responding at http://localhost:5001/health
+2026-05-20 15:41:20 [INFO] [__main__] Starting SSE server on port 5001...
+2026-05-20 15:41:21 [INFO] [__main__] SSE server listening on http://localhost:5001
+2026-05-20 15:41:21 [INFO] [__main__] [SSE] New client connected. Total clients: 1
+2026-05-20 15:41:22 [INFO] [__main__] SSE server ready at http://localhost:5001/health
+2026-05-20 15:41:22 [INFO] [__main__] SSE server ready at http://localhost:5001
+2026-05-20 15:41:22 [INFO] [__main__] Frontend dist already built: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\soc-dashboard\frontend\dist
+2026-05-20 15:41:27 [WARNING] [__main__] Backend not responding at http://127.0.0.1:8000/health
+2026-05-20 15:41:27 [INFO] [__main__] Starting FastAPI backend on 127.0.0.1:8000...
+2026-05-20 15:41:33 [INFO] [__main__] Backend ready at http://127.0.0.1:8000/health
+2026-05-20 15:41:33 [INFO] [__main__] Backend ready at http://127.0.0.1:8000
+2026-05-20 15:41:33 [INFO] [__main__] Browser opened -> http://localhost:5001
+2026-05-20 15:41:34 [INFO] [__main__] [SSE] New client connected. Total clients: 2
+2026-05-20 15:41:35 [INFO] [__main__] Starting Agent 1 from main.py
+2026-05-20 15:41:35 [INFO] [__main__] Agent 1 started
+2026-05-20 15:41:38 [INFO] [__main__] Starting Agent 2 from graph_reporter.py
+2026-05-20 15:41:38 [INFO] [__main__] Agent 2 started
+2026-05-20 15:41:40 [INFO] [__main__] Received signal 2
+2026-05-20 15:41:40 [INFO] [__main__] Shutting down services...
+2026-05-20 15:41:40 [INFO] [__main__] Stopping sse...
+2026-05-20 15:41:40 [INFO] [__main__] Stopping backend...
+2026-05-20 15:41:40 [INFO] [__main__] Shutdown complete.
+2026-05-20 15:41:55 [INFO] [__main__] Directories verified/created
+2026-05-20 15:41:55 [INFO] [__main__] Found Agent 1 at: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\agent1\main.py
+2026-05-20 15:41:55 [INFO] [__main__] Found Agent 2 (Graph Reporter) at: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\agent2\graph_reporter.py
+2026-05-20 15:41:59 [INFO] [__main__] Received signal 2
+2026-05-20 15:41:59 [INFO] [__main__] Shutting down services...
+2026-05-20 15:41:59 [INFO] [__main__] Shutdown complete.
+2026-05-20 15:42:24 [INFO] [__main__] Directories verified/created
+2026-05-20 15:42:24 [INFO] [__main__] Found Agent 1 at: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\agent1\main.py
+2026-05-20 15:42:24 [INFO] [__main__] Found Agent 2 (Graph Reporter) at: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\agent2\graph_reporter.py
+2026-05-20 15:42:33 [WARNING] [__main__] SSE server not responding at http://localhost:5001/health
+2026-05-20 15:42:33 [INFO] [__main__] Starting SSE server on port 5001...
+2026-05-20 15:42:33 [INFO] [__main__] SSE server listening on http://localhost:5001
+2026-05-20 15:42:34 [INFO] [__main__] [SSE] New client connected. Total clients: 1
+2026-05-20 15:42:34 [INFO] [__main__] [SSE] New client connected. Total clients: 2
+2026-05-20 15:42:35 [INFO] [__main__] SSE server ready at http://localhost:5001/health
+2026-05-20 15:42:35 [INFO] [__main__] SSE server ready at http://localhost:5001
+2026-05-20 15:42:35 [INFO] [__main__] Frontend dist already built: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\soc-dashboard\frontend\dist
+2026-05-20 15:42:40 [WARNING] [__main__] Backend not responding at http://127.0.0.1:8000/health
+2026-05-20 15:42:40 [INFO] [__main__] Starting FastAPI backend on 127.0.0.1:8000...
+2026-05-20 15:42:45 [INFO] [__main__] Backend ready at http://127.0.0.1:8000/health
+2026-05-20 15:42:45 [INFO] [__main__] Backend ready at http://127.0.0.1:8000
+2026-05-20 15:42:45 [INFO] [__main__] Browser opened -> http://localhost:5001
+2026-05-20 15:42:46 [INFO] [__main__] [SSE] New client connected. Total clients: 3
+2026-05-20 15:42:47 [INFO] [__main__] Starting Agent 1 from main.py
+2026-05-20 15:42:47 [INFO] [__main__] Agent 1 started
+2026-05-20 15:42:50 [INFO] [__main__] Starting Agent 2 from graph_reporter.py
+2026-05-20 15:42:50 [INFO] [__main__] Agent 2 started
+2026-05-20 15:42:52 [INFO] [__main__] Agent 1 registered with callback URL: http://127.0.0.1:8002/ingest
+2026-05-20 15:48:14 [INFO] [__main__] [SSE] Client disconnected. Total clients: 2
+2026-05-20 15:48:16 [INFO] [__main__] [SSE] Client disconnected. Total clients: 1
+2026-05-20 15:53:09 [INFO] [__main__] Received signal 2
+2026-05-20 15:53:09 [INFO] [__main__] Shutting down services...
+2026-05-20 15:53:09 [INFO] [__main__] Stopping sse...
+2026-05-20 15:53:09 [INFO] [__main__] Stopping backend...
+2026-05-20 15:53:09 [INFO] [__main__] Shutdown complete.

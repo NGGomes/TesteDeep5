@@ -1,0 +1,120 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 5 — ACTIVIDADE: PIPELINE DE RENDER
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_render_pipeline
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #e2e8f0
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #94a3b8
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Dashboard Frontend — Pipeline de Render 
+
+|main.ts|
+start
+:Trigger de render:
+SSE event recebido
+OU user interaction
+OU timer tick;
+
+:renderFull();
+
+fork
+  |alert_timeline.ts|
+  :updateTimelineDisplay()
+  -> getAlerts()
+  -> renderAlertTimelineSVG(
+  alerts, height=72,
+  selectedAlertNumber,
+  onAlertClick -> extension
+  )
+  -> innerHTML do #timeline-content
+  -> auto-scroll para o fim;
+fork again
+  |windows_panel.ts|
+  :renderWindowsPanel(
+    _activeWindows, nowMs
+  );
+  :Filtrar: alert_count > 0;
+  :Separar ACTIVAS / FECHADAS;
+  note right
+    Card ACTIVA (4 linhas):
+    1. [CLOCK] 09:00->09:19 [CHART] N Score:N [TIMER]
+    2. [TARGET] N Fases: Ph->Ph
+    3. Alert Timeline SVG
+    4. Hipóteses com botões CR/HI%
+    -----------------------------
+    Card FECHADA (minimal):
+    09:00->09:05 [85% Hypothesis] [CHART N]
+    + badge [HAND] / [TIMER] / [BOLT]
+  end note
+  :-> innerHTML do #windows-panel;
+fork again
+  |graph_viz.ts|
+  :renderHypothesisGraph(
+    _graphState
+  )
+  -> SVG do grafo de hipóteses
+  -> nós coloridos por tier
+  -> edges ponderadas
+  -> innerHTML do #hypothesis-graph;
+fork again
+  |agent2.ts|
+  :renderAgent2Panel(
+    [], 0,
+    agent2Reports,
+    {}
+  );
+  :Para cada report:;
+  :card com label, tier, %,
+    methodIcon ([HAND]/[TIMER]/[BOLT]),
+    windowCtx (alertas, score,
+    fases, timestamps)
+  -> botao [BOX] abre relatório PDF;
+  :-> innerHTML do #agent2-panel;
+fork again
+  |slice.ts|
+  :syncSliceInputs()
+  updateSliceLabels()
+  updateCurrentAlertDisplay()
+  -> DOM do slicer temporal;
+fork again
+  |sidebar.ts kpi.ts footer.ts|
+  :renderSidebarKPIs()
+  renderKPIStrip()
+  renderScoreFilter()
+  renderConnectionBadge()
+  -> DOM das secções auxiliares;
+end fork
+
+|main.ts|
+:_activeWindows
+  .filter(w => !w.is_closed)
+  .forEach(_pushWindowContextToExtension);
+if (prob_top >= 75%
+AND NOT in _pushedToExtension?) then (sim)
+  :window.postMessage(
+    REDSHIFT_WINDOW_CONTEXT, '*'
+  )
+  -> Chrome Extension;
+else (nao)
+endif
+
+:_updatePendingBadge()
+badge [HOURGLASS] N em fila;
+
+stop
+@enduml

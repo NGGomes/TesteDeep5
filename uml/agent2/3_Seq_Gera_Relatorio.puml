@@ -1,0 +1,105 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 3 — SEQUÊNCIA
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_sequence
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title Agent 2 — Diagrama de Sequência: Geração de Relatório 
+
+participant "SSE Server\n:5001" as SSE
+participant "GraphReporter\n(Thread)" as GR
+participant "HypothesisGraph\n[Agent 1]" as HG
+participant "AlertLoader" as AL
+participant "DataExtractor" as DE
+participant "IncidentAnalyzer\n[LLM]" as IA
+participant "CISOGenerator\nSOCGenerator" as LG
+participant "Texer :5002" as TX
+participant "Dashboard" as DASH
+
+== Caminho 1: trigger_report_now() — imediato após confirmação ==
+
+SSE -> GR : trigger_report_now(\n  label, score, ts, tier, "operator")
+GR -> GR : _enqueue(label, ...)\npersiste .pending_queue.json
+note right of GR
+  A fila garante entrega mesmo
+  se LLM falhar — o poll loop
+  reprocessa na próxima iteração
+end note
+GR -> GR : _process_queue()
+
+== Caminho 2: run() poll loop (cada 2s) ==
+
+GR -> HG : get_confirmed_hypotheses(\n  since_ms=_last_processed_ms)
+HG --> GR : List[Tuple[label, score, ts, tier, method]]
+GR -> GR : _enqueue() para novos
+GR -> GR : _process_queue()
+
+== _process_queue() — geração efectiva ==
+
+GR -> HG : get_graph_state()\nget_kill_chain_progress()\nget_window_evidence_summary()
+HG --> GR : context: Dict
+
+GR -> HG : get_alert_ids_for_confirmations(\n  confirmed_labels)
+HG --> GR : alert_ids: List[str]
+
+GR -> AL : get_alerts_by_ids(alert_ids)
+AL -> AL : _build_cache() se necessário\n(lê dataset .txt)
+AL --> GR : raw_alerts: List[Dict]
+
+alt [_HAS_ANALYZERS == True]
+  GR -> DE : extract_assets(raw_alerts)
+  DE --> GR : assets: List[str]
+  GR -> DE : extract_cves(raw_alerts)
+  DE --> GR : cves: List[str]
+  GR -> DE : extract_ioc_bundle(raw_alerts)
+  DE --> GR : ioc_bundle: Dict\n{ipv4, fqdns, executables, cve_ids}
+end
+
+alt [_HAS_LLM == True]
+  GR -> IA : analyze_incident(\n  ciso_options, phases,\n  alert_count, assets,\n  cves, iocs, mitre)
+  IA -> IA : construir prompt estruturado
+  IA -> IA : _call_llm(prompt, max_tokens=1200)\ntimeout=120s
+  IA --> GR : llm_analysis: Dict\n{executive_summary, business_impact,\n mitre_techniques, recommended_actions,\n regulatory_impact, risk_tier}
+else [LLM indisponível]
+  GR -> IA : _fallback_analysis()
+  IA --> GR : análise rule-based
+end
+
+GR -> GR : _generate_ciso_report(confirmed, context)\nassemblar report: Dict\n{metadata, decision, ciso_report,\n soc_report, confirmed_hypotheses,\n recommended_actions, regulatory_impact}
+
+alt [_HAS_LATEX == True]
+  GR -> LG : CISOReportGenerator.generate(\n  metadata, analysis)
+  LG --> GR : ciso_tex: str
+  GR -> TX : POST /generate {tex: ciso_tex}
+  TX --> GR : ciso.pdf path
+  GR -> LG : SOCReportGenerator.generate(\n  metadata, analysis)
+  LG --> GR : soc_tex: str
+  GR -> TX : POST /generate {tex: soc_tex}
+  TX --> GR : soc.pdf path
+end
+
+GR -> GR : _save_report(report)\ngraph_report_YYYYMMDD_HHMMSS.json
+
+GR -> GR : _emit_report(report)\nPOST /ingest {type: "ciso_report"}
+GR -> SSE : POST :5001/ingest\n{type: "ciso_report", payload: report}
+SSE --> DASH : event: ciso_report
+DASH --> DASH : card no Intelligence Reports\nbadge ⏳ desaparece
+
+GR -> GR : _dequeue_success(label)\nremove de .pending_queue.json
+@enduml

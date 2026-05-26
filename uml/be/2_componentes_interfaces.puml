@@ -1,0 +1,130 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' BACKEND — DIAGRAMA 2: COMPONENTES
+' ═══════════════════════════════════════════════════════════════════
+
+!theme plain
+
+skinparam linetype ortho
+skinparam nodesep 65
+skinparam ranksep 140
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title FastAPI Backend — Componentes e Interfaces 
+
+package "FastAPI Backend :8000" as PFASTAPI {
+  component [main.py\nFastAPI App\n\n\n\n\n\n\n\n\n\n\n\n\n\n] as APP
+  component [api/cve.py\nCVE Router] as CVEROUTER
+  component [api/siem.py\nSIEM Router] as SIEMROUTER
+  component [api/analysis.py\nAnalysis Router] as AROUTER
+  component [api/health.py\nHealth Router] as HROUTER
+  component [services/cve_service.py\nCVE fetcher + cache] as CVES
+  component [services/llm_service.py\nLLM wrapper (litellm)] as LLMS
+  component [core/config.py\nSettings (pydantic)] as CFG
+
+  interface "\n\n\nGET /health" as IH
+  interface "\n\n\nGET /api/config" as IC
+  interface "\n\nGET /api/agent2/reports" as IR2
+  interface "GET /api/graph/state" as IGS
+  interface "POST /api/v1/analysis/cve" as IACVE
+  interface "\n\nPOST /api/v1/analysis/siem" as IASIEM
+  interface "POST /api/v1/analysis/chat" as IACHAT
+  
+  interface "GET /api/v1/cve/{id}/analyze" as ICVEA
+  interface "GET /api/v1/cve/{id}/raw" as ICVER
+  interface "\n\POST /api/v1/siem/analyze" as ISIEMA
+  interface "\nPOST /api/v1/analysis/360" as I360
+
+
+  APP - IH
+  APP - IC
+  APP - IR2
+  APP -down- IGS
+  APP - IACVE
+  APP - IASIEM
+  APP - IACHAT
+  CVEROUTER - ICVEA
+  CVEROUTER - ICVER
+  SIEMROUTER - ISIEMA
+  AROUTER - I360
+}
+
+package "LLM Runtime (externo)" {
+  component [Ollama :11434\nllama3.2 / ...] as OLLAMA
+  component [Anthropic API\nclaude-haiku-*] as ANTH
+  component [OpenAI API\ngpt-4o-mini] as OAI
+}
+
+package "NVD / NIST (externo)" as SOCD{
+  component [CVE API\nservices.nvd.nist.gov] as NVD
+}
+
+package "SOC Dashboard" {
+  component [Agent 1\nHypothesisGraph] as A1
+  component [Agent 2\nReports dir] as A2R
+  component [SSE Server\n:5001] as SSE
+}
+
+package "Chrome Extension"  as PEXT {
+  component [\n\n\n\npopup.ts\nRedShift Agent\n\n\n\n\n\n\n\n\n] as POPUP
+}
+
+PFASTAPI -[hidden]right-> PEXT
+PFASTAPI -[hidden]right-> PEXT
+PFASTAPI -[hidden]-> PEXT
+
+' Ligações internas
+APP --> CVEROUTER : include_router /api/v1/cve
+APP --> SIEMROUTER : include_router /api/v1/siem
+APP --> AROUTER : include_router /api/v1/analysis
+APP --> HROUTER : include_router /api/v1
+APP ..> CFG : settings
+CVEROUTER --> CVES : \n\n\n\n\nfetch_cve()
+CVEROUTER --> LLMS : analyze_cve()\n\n\n
+SIEMROUTER --> LLMS : analyze_siem_alert()
+AROUTER --> CVES : fetch_cve()
+AROUTER --> LLMS : analyze_cve()\nanalyze_siem_alert()
+LLMS ..> CFG : \n\nACTIVE_LLM_MODEL\nLLM_PROVIDER
+
+' Externas
+LLMS --> OLLAMA : litellm POST\n[provider=ollama]
+LLMS --> ANTH : litellm POST\n[provider=anthropic]
+LLMS --> OAI : litellm POST\n[provider=openai]
+CVES --> NVD : httpx GET\n?cveId={id}
+
+' SOC
+APP --> A1 : get_global_graph()\nget_confirmed_hypotheses()
+APP --> A2R : lê reports JSON
+APP --> SSE : trigger_report_now()
+
+' Extension
+'POPUP --> IACVE : POST /api/v1/analysis/cve
+'POPUP --> IASIEM : POST /api/v1/analysis/siem
+'POPUP --> IACHAT : POST /api/v1/analysis/chat\n\n\n\n
+POPUP --> IACVE 
+POPUP --> IASIEM 
+POPUP --> IACHAT 
+
+note right of LLMS
+  litellm abstrai providers:
+  LLM_PROVIDER2 define qual usar.
+  Suporta Ollama (local),
+  Anthropic e OpenAI.
+  Timeout: LLM_TIMEOUT_SECONDS
+  MaxTokens: MAX_TOKENS_PER_REQUEST
+end note
+@enduml

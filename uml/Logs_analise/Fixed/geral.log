@@ -1,0 +1,288 @@
+' =============
+' LOGs - Fixed
+' =============
+
+2026-05-20 13:21:21 [INFO       ] [__main__] Directories verified/created
+2026-05-20 13:21:21 [INFO       ] [__main__] Found Agent 1 at: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\agent1\main.py
+2026-05-20 13:21:21 [INFO       ] [__main__] Found Agent 2 (Graph Reporter) at: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\agent2\graph_reporter.py
+
+============================================================
+SOC/CISO Dashboard Launcher v4.2.0
+  Dashboard: http://localhost:5001
+  Backend:   http://127.0.0.1:8000
+  Project:   D:\00-ISEL\Projeto\Documentacao\testeDeep_5
+  Mode:      full
+  Agent 1:   main.py
+  Agent 2:   Graph Reporter (trigger-based)
+============================================================
+
+2026-05-20 13:21:30 [WARNING    ] [__main__] SSE server not responding at http://localhost:5001/health
+2026-05-20 13:21:30 [INFO       ] [__main__] Starting SSE server on port 5001...
+2026-05-20 13:21:32 [INFO       ] [__main__] SSE server ready at http://localhost:5001/health
+2026-05-20 13:21:32 [INFO       ] [__main__] SSE server ready at http://localhost:5001
+2026-05-20 13:21:40 [WARNING    ] [__main__] Texer not responding at http://localhost:5002/health
+2026-05-20 13:21:41 [INFO       ] [__main__] Starting Texer on port 5002...
+2026-05-20 13:21:43 [INFO       ] [__main__] Texer ready at http://localhost:5002/health
+2026-05-20 13:21:43 [INFO       ] [__main__] Texer ready at http://localhost:5002
+2026-05-20 13:21:43 [INFO       ] [__main__] Frontend dist already built: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\soc-dashboard\frontend\dist
+2026-05-20 13:21:47 [WARNING    ] [__main__] Backend not responding at http://127.0.0.1:8000/health
+2026-05-20 13:21:47 [INFO       ] [__main__] Starting FastAPI backend on 127.0.0.1:8000...
+2026-05-20 13:21:53 [INFO       ] [__main__] Backend ready at http://127.0.0.1:8000/health
+2026-05-20 13:21:53 [INFO       ] [__main__] Backend ready at http://127.0.0.1:8000
+2026-05-20 13:21:53 [INFO       ] [__main__] Browser opened -> http://localhost:5001
+2026-05-20 13:21:55 [INFO       ] [__main__] Starting Agent 1 from main.py
+2026-05-20 13:21:55 [INFO       ] [__main__] Agent 1 started
+2026-05-20 13:21:55 [INFO       ] [agent1.mappings] Mappings module loaded
+2026-05-20 13:21:55 [INFO       ] [agent1.window_manager] [WindowManager] mode=adaptive
+2026-05-20 13:21:55 [INFO       ] [agent1.console] ============================================================
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Agent 1 - Cognitive Security Engine
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Modo: Streaming (escuta alertas via callback HTTP)
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Janela CISO: 15 minutos
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Máx. hipóteses: 3
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Threshold confirmação: 0.85
+2026-05-20 13:21:55 [INFO       ] [agent1.console] ============================================================
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Carregando alertas de: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\projD.txt
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Carregados 37 alertas
+2026-05-20 13:21:55 [INFO       ] [agent1.main] Dataset bounds saved: 1777017600000 -> 1777056420000 (37 alerts)
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Iniciando servidor de callbacks na porta 8002...
+2026-05-20 13:21:55 [INFO       ] [agent1.main] Agent 1 callback server listening on port 8002
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Processamento de alertas iniciado. Aguardando alertas...
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Loop de processamento iniciado - aguardando alertas...
+2026-05-20 13:21:55 [INFO       ] [agent1.console] Registando com servidor SSE...
+2026-05-20 13:21:58 [INFO       ] [__main__] Starting Agent 2 from graph_reporter.py
+2026-05-20 13:21:58 [INFO       ] [__main__] Agent 2 started
+2026-05-20 13:21:58 [INFO       ] [agent1.main] [REGISTER] Sending to URL: http://localhost:5001/register-agent1
+2026-05-20 13:21:58 [INFO       ] [agent1.main] [REGISTER] Body: b'{"agent": "agent1", "status": "ready", "callback_url": "http://127.0.0.1:8002/ingest"}'
+2026-05-20 13:22:00 [INFO       ] [agent1.main] [REGISTER] Response: {'ok': True, 'message': 'Agent 1 registration acknowledged'}
+2026-05-20 13:22:00 [INFO       ] [agent1.console] ✓ Registado com sucesso.
+2026-05-20 13:22:00 [INFO       ] [agent1.console]
+✅ Agente 1 pronto.
+2026-05-20 13:22:00 [INFO       ] [agent1.console]    37 alertas carregados no dataset.
+2026-05-20 13:22:00 [INFO       ] [agent1.console]    O slice.ts controla o ritmo de entrega dos alertas.
+2026-05-20 13:22:00 [INFO       ] [agent1.console]    O Agente 1 processa APENAS quando recebe callback.
+2026-05-20 13:22:00 [INFO       ] [agent1.console]
+   Pressione Ctrl+C para parar.
+
+[Agent2] LiteLLM loaded. Provider: anthropic
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] [GraphReporter] latex_generator loaded OK
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] [GraphReporter] analyzers loaded OK
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] ============================================================
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] Agent 2 - Graph Reporter (Trigger-based)
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] Confirmation threshold: 0.85
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] Will generate reports when hypotheses are confirmed
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] ============================================================
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] Starting Graph Reporter...
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] Waiting for hypothesis confirmations from the graph
+2026-05-20 13:22:02 [INFO       ] [agent2.graph_reporter] Connected to Hypothesis Graph
+2026-05-20 13:22:02 [INFO       ] [agent1.main] Callback received: alert W101
+2026-05-20 13:22:02 [INFO       ] [agent1.console] [1/37] Processing: W101
+2026-05-20 13:22:02 [INFO       ] [agent1.main] Processing alert: W101
+2026-05-20 13:22:14 [INFO       ] [agent1.main] Callback received: alert W102
+2026-05-20 13:22:14 [INFO       ] [agent1.console] [2/37] Processing: W102
+2026-05-20 13:22:14 [INFO       ] [agent1.main] Processing alert: W102
+2026-05-20 13:22:25 [INFO       ] [agent1.main] Callback received: alert W103
+2026-05-20 13:22:25 [INFO       ] [agent1.console] [3/37] Processing: W103
+2026-05-20 13:22:25 [INFO       ] [agent1.main] Processing alert: W103
+2026-05-20 13:22:37 [INFO       ] [agent1.main] Callback received: alert W104
+2026-05-20 13:22:37 [INFO       ] [agent1.console] [4/37] Processing: W104
+2026-05-20 13:22:37 [INFO       ] [agent1.main] Processing alert: W104
+2026-05-20 13:22:48 [INFO       ] [agent1.main] Callback received: alert W105
+2026-05-20 13:22:48 [INFO       ] [agent1.console] [5/37] Processing: W105
+2026-05-20 13:22:48 [INFO       ] [agent1.main] Processing alert: W105
+2026-05-20 13:22:59 [INFO       ] [agent1.main] Callback received: alert W106
+2026-05-20 13:23:00 [INFO       ] [agent1.console] [6/37] Processing: W106
+2026-05-20 13:23:00 [INFO       ] [agent1.main] Processing alert: W106
+2026-05-20 13:23:11 [INFO       ] [agent1.main] Callback received: alert W107
+2026-05-20 13:23:11 [INFO       ] [agent1.console] [7/37] Processing: W107
+2026-05-20 13:23:11 [INFO       ] [agent1.main] Processing alert: W107
+2026-05-20 13:23:22 [INFO       ] [agent1.main] Callback received: alert W108
+2026-05-20 13:23:22 [INFO       ] [agent1.console] [8/37] Processing: W108
+2026-05-20 13:23:22 [INFO       ] [agent1.main] Processing alert: W108
+2026-05-20 13:23:34 [INFO       ] [agent1.main] Callback received: alert W109
+2026-05-20 13:23:34 [INFO       ] [agent1.console] [9/37] Processing: W109
+2026-05-20 13:23:34 [INFO       ] [agent1.main] Processing alert: W109
+2026-05-20 13:23:45 [INFO       ] [agent1.main] Callback received: alert W110
+2026-05-20 13:23:45 [INFO       ] [agent1.console] [10/37] Processing: W110
+2026-05-20 13:23:45 [INFO       ] [agent1.main] Processing alert: W110
+2026-05-20 13:23:57 [INFO       ] [agent1.main] Callback received: alert W111
+2026-05-20 13:23:57 [INFO       ] [agent1.console] [11/37] Processing: W111
+2026-05-20 13:23:57 [INFO       ] [agent1.main] Processing alert: W111
+2026-05-20 13:24:08 [INFO       ] [agent1.main] Callback received: alert W112
+2026-05-20 13:24:08 [INFO       ] [agent1.console] [12/37] Processing: W112
+2026-05-20 13:24:08 [INFO       ] [agent1.main] Processing alert: W112
+2026-05-20 13:24:19 [INFO       ] [agent1.main] Callback received: alert W113
+2026-05-20 13:24:19 [INFO       ] [agent1.console] [13/37] Processing: W113
+2026-05-20 13:24:19 [INFO       ] [agent1.main] Processing alert: W113
+2026-05-20 13:24:21 [INFO       ] [agent1.hypothesis_graph] *** AUTO-CONFIRMED: Major Breach with Impact (score=0.850, evidence=1) ***
+2026-05-20 13:24:23 [INFO       ] [agent1.main] Window evidence | window_id=605e64bc | phases=['EXFILTRATION', 'IMPACT'] | phase_score=15 | alert_count=3
+2026-05-20 13:24:23 [INFO       ] [agent1.main] *** CONFIRMED HYPOTHESIS: Major Breach with Impact (score=0.850) by auto ***
+2026-05-20 13:24:23 [INFO       ] [agent1.console] ✓ CONFIRMED (auto): Major Breach with Impact
+2026-05-20 13:24:23 [INFO       ] [agent2.graph_reporter] [Queue] Enqueued: Major Breach with Impact (auto)
+2026-05-20 13:24:23 [INFO       ] [agent2.graph_reporter] [Queue] Processing 1 pending report(s)
+2026-05-20 13:24:23 [INFO       ] [agent2.graph_reporter] [AlertLoader] Loaded 37 alerts from dataset_bounds.json
+2026-05-20 13:24:23 [INFO       ] [agent2.graph_reporter] [GraphReporter] Loaded 3/3 raw alerts for enrichment
+2026-05-20 13:24:24 [INFO       ] [agent2.graph_reporter] [GraphReporter] Enrichment: 3 assets, 0 CVEs, 2 IoCs
+[Agent2] LLM Tokens - prompt: 465, completion: 776
+2026-05-20 13:24:32 [INFO       ] [agent2.graph_reporter] [GraphReporter] LLM analysis complete. Provider: anthropic
+2026-05-20 13:24:32 [INFO       ] [agent2.graph_reporter] [GraphReporter] Generating CISO LaTeX → graph_report_20260520_132432_ciso.tex
+2026-05-20 13:24:32 [INFO       ] [agent2.graph_reporter] [GraphReporter] CISO LaTeX saved: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\reports\agent2\graph_report_20260520_132432_ciso.tex
+2026-05-20 13:24:32 [INFO       ] [agent2.graph_reporter] [GraphReporter] Generating SOC LaTeX → graph_report_20260520_132432_soc.tex
+2026-05-20 13:24:32 [INFO       ] [agent2.graph_reporter] [GraphReporter] SOC LaTeX saved: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\reports\agent2\graph_report_20260520_132432_soc.tex
+2026-05-20 13:24:32 [INFO       ] [agent2.graph_reporter] Report saved: graph_report_20260520_132432.json
+2026-05-20 13:24:34 [INFO       ] [agent2.graph_reporter] CISO report emitted to dashboard: 1 hypotheses
+2026-05-20 13:24:34 [INFO       ] [agent2.graph_reporter] [Queue] Completed: Major Breach with Impact
+2026-05-20 13:24:34 [INFO       ] [agent2.graph_reporter] [Queue] ✓ Report emitted: Major Breach with Impact
+2026-05-20 13:24:35 [INFO       ] [agent1.main] Callback received: alert W114
+2026-05-20 13:24:35 [INFO       ] [agent1.console] [14/37] Processing: W114
+2026-05-20 13:24:35 [INFO       ] [agent1.main] Processing alert: W114
+2026-05-20 13:24:37 [INFO       ] [agent1.main] Window evidence | window_id=8a917c6b | phases=['EXFILTRATION', 'IMPACT'] | phase_score=15 | alert_count=3
+2026-05-20 13:24:48 [INFO       ] [agent1.main] Callback received: alert W115
+2026-05-20 13:24:48 [INFO       ] [agent1.console] [15/37] Processing: W115
+2026-05-20 13:24:48 [INFO       ] [agent1.main] Processing alert: W115
+2026-05-20 13:25:00 [INFO       ] [agent1.main] Callback received: alert W116
+2026-05-20 13:25:00 [INFO       ] [agent1.console] [16/37] Processing: W116
+2026-05-20 13:25:00 [INFO       ] [agent1.main] Processing alert: W116
+2026-05-20 13:25:11 [INFO       ] [agent1.main] Callback received: alert W201
+2026-05-20 13:25:11 [INFO       ] [agent1.console] [17/37] Processing: W201
+2026-05-20 13:25:11 [INFO       ] [agent1.main] Processing alert: W201
+2026-05-20 13:25:23 [INFO       ] [agent1.main] Callback received: alert W202
+2026-05-20 13:25:23 [INFO       ] [agent1.console] [18/37] Processing: W202
+2026-05-20 13:25:23 [INFO       ] [agent1.main] Processing alert: W202
+2026-05-20 13:25:34 [INFO       ] [agent1.main] Callback received: alert W203
+2026-05-20 13:25:34 [INFO       ] [agent1.console] [19/37] Processing: W203
+2026-05-20 13:25:34 [INFO       ] [agent1.main] Processing alert: W203
+2026-05-20 13:25:45 [INFO       ] [agent1.main] Callback received: alert W204
+2026-05-20 13:25:45 [INFO       ] [agent1.console] [20/37] Processing: W204
+2026-05-20 13:25:45 [INFO       ] [agent1.main] Processing alert: W204
+2026-05-20 13:25:57 [INFO       ] [agent1.main] Callback received: alert W205
+2026-05-20 13:25:57 [INFO       ] [agent1.console] [21/37] Processing: W205
+2026-05-20 13:25:57 [INFO       ] [agent1.main] Processing alert: W205
+2026-05-20 13:26:08 [INFO       ] [agent1.main] Callback received: alert W206
+2026-05-20 13:26:08 [INFO       ] [agent1.console] [22/37] Processing: W206
+2026-05-20 13:26:08 [INFO       ] [agent1.main] Processing alert: W206
+2026-05-20 13:26:20 [INFO       ] [agent1.main] Callback received: alert W301
+2026-05-20 13:26:20 [INFO       ] [agent1.console] [23/37] Processing: W301
+2026-05-20 13:26:20 [INFO       ] [agent1.main] Processing alert: W301
+2026-05-20 13:26:31 [INFO       ] [agent1.main] Callback received: alert W302
+2026-05-20 13:26:31 [INFO       ] [agent1.console] [24/37] Processing: W302
+2026-05-20 13:26:31 [INFO       ] [agent1.main] Processing alert: W302
+2026-05-20 13:26:42 [INFO       ] [agent1.main] Callback received: alert W303
+2026-05-20 13:26:42 [INFO       ] [agent1.console] [25/37] Processing: W303
+2026-05-20 13:26:42 [INFO       ] [agent1.main] Processing alert: W303
+2026-05-20 13:26:54 [INFO       ] [agent1.main] Callback received: alert W304
+2026-05-20 13:26:54 [INFO       ] [agent1.console] [26/37] Processing: W304
+2026-05-20 13:26:54 [INFO       ] [agent1.main] Processing alert: W304
+2026-05-20 13:27:05 [INFO       ] [agent1.main] Callback received: alert W401
+2026-05-20 13:27:05 [INFO       ] [agent1.console] [27/37] Processing: W401
+2026-05-20 13:27:05 [INFO       ] [agent1.main] Processing alert: W401
+2026-05-20 13:27:17 [INFO       ] [agent1.main] Callback received: alert W402
+2026-05-20 13:27:17 [INFO       ] [agent1.console] [28/37] Processing: W402
+2026-05-20 13:27:17 [INFO       ] [agent1.main] Processing alert: W402
+2026-05-20 13:27:28 [INFO       ] [agent1.main] Callback received: alert W501
+2026-05-20 13:27:28 [INFO       ] [agent1.console] [29/37] Processing: W501
+2026-05-20 13:27:28 [INFO       ] [agent1.main] Processing alert: W501
+2026-05-20 13:27:40 [INFO       ] [agent1.main] Callback received: alert W502
+2026-05-20 13:27:40 [INFO       ] [agent1.console] [30/37] Processing: W502
+2026-05-20 13:27:40 [INFO       ] [agent1.main] Processing alert: W502
+2026-05-20 13:27:51 [INFO       ] [agent1.main] Callback received: alert W503
+2026-05-20 13:27:51 [INFO       ] [agent1.console] [31/37] Processing: W503
+2026-05-20 13:27:51 [INFO       ] [agent1.main] Processing alert: W503
+2026-05-20 13:28:02 [INFO       ] [agent1.main] Callback received: alert W504
+2026-05-20 13:28:02 [INFO       ] [agent1.console] [32/37] Processing: W504
+2026-05-20 13:28:02 [INFO       ] [agent1.main] Processing alert: W504
+2026-05-20 13:28:14 [INFO       ] [agent1.main] Callback received: alert W505
+2026-05-20 13:28:14 [INFO       ] [agent1.console] [33/37] Processing: W505
+2026-05-20 13:28:14 [INFO       ] [agent1.main] Processing alert: W505
+2026-05-20 13:28:25 [INFO       ] [agent1.main] Callback received: alert N101
+2026-05-20 13:28:25 [INFO       ] [agent1.console] [34/37] Processing: N101
+2026-05-20 13:28:25 [INFO       ] [agent1.main] Processing alert: N101
+2026-05-20 13:28:36 [INFO       ] [agent1.main] Callback received: alert N102
+2026-05-20 13:28:36 [INFO       ] [agent1.console] [35/37] Processing: N102
+2026-05-20 13:28:36 [INFO       ] [agent1.main] Processing alert: N102
+2026-05-20 13:28:48 [INFO       ] [agent1.main] Callback received: alert N103
+2026-05-20 13:28:48 [INFO       ] [agent1.console] [36/37] Processing: N103
+2026-05-20 13:28:48 [INFO       ] [agent1.main] Processing alert: N103
+2026-05-20 13:29:01 [INFO       ] [agent1.main] Callback received: alert N104
+2026-05-20 13:29:01 [INFO       ] [agent1.console] [37/37] Processing: N104
+2026-05-20 13:29:01 [INFO       ] [agent1.main] Processing alert: N104
+2026-05-20 13:29:03 [INFO       ] [agent1.console] Todos os 37 alertas processados.
+
+' ===============
+
+Análise do Log
+Este log mostra a execução bem-sucedida de um sistema de segurança cognitiva com dois agentes para um dashboard SOC/CISO.
+
+📊 Resumo da Execução
+Status: ✅ SUCESSO - Todos os componentes iniciaram e processaram 37 alertas
+
+Duração: ~7 minutos (13:21:21 até 13:29:03)
+
+Sistema: SOC/CISO Dashboard v4.2.0
+
+🏗️ Arquitetura do Sistema
+Componente	Porta	Status	Função
+Dashboard (Frontend)	5001	✅ Ready	Interface visual
+Texer	5002	✅ Ready	Provavelmente processamento de texto/relatórios
+Backend (FastAPI)	8000	✅ Ready	API principal
+Agent 1 Callback	8002	✅ Listening	Recebe alertas via HTTP
+🤖 Agentes
+Agent 1 - Cognitive Security Engine
+
+Modo: Streaming com callback HTTP
+
+Janela CISO: 15 minutos
+
+Threshold confirmação: 0.85
+
+Processou 37 alertas sequencialmente (W101-W505, N101-N104)
+
+Agent 2 - Graph Reporter
+
+Provider: Anthropic (LLM)
+
+Trigger-based: gera relatórios quando hipóteses são confirmadas
+
+🔍 Evento Crítico Detectado
+13:24:21 - Hipótese "Major Breach with Impact" auto-confirmada:
+
+Score: 0.850 (atingiu threshold 0.85)
+
+Evidências: 1
+
+Fases do ataque: EXFILTRATION → IMPACT
+
+Score por fase: 15
+
+Alertas na janela: 3
+
+📝 Ações do Agent 2 após confirmação
+Enriqueceu dados: 3 assets, 0 CVEs, 2 IoCs
+
+Usou LLM (465 tokens prompt, 776 completion)
+
+Gerou 2 relatórios LaTeX:
+
+graph_report_20260520_132432_ciso.tex (para CISO)
+
+graph_report_20260520_132432_soc.tex (para SOC)
+
+Emtiu para dashboard às 13:24:34
+
+⚠️ Observações
+Warnings normais de startup:
+
+SSE server, Texer e Backend tiveram health check warnings iniciais (normal ao iniciar serviços)
+
+Processamento sequencial: Agent 1 processou alerta a alerta (~11-12 segundos cada)
+
+Não houve novas confirmações após o primeiro breach detectado
+
+✅ Conclusão
+Sistema funcionou conforme esperado:
+
+Pipeline completo: alertas → Agent 1 (análise) → confirmação → Agent 2 (relatório) → dashboard
+
+Geração automática de relatórios em LaTeX para diferentes audiências
+
+Integração com LLM para enriquecimento de análise
+

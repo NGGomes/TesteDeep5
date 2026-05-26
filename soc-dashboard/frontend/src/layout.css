@@ -1,0 +1,234 @@
+/* layout.css — app shell, main stack, section containers, grid, footer
+   Localização: src/layout.css
+   Importado por: src/style.css  (não importar directamente nos componentes)
+   Depende de: variáveis de src/styles/theme.css (já carregadas por style.css)
+*/
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.main-stack {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Parallel Windows section */
+.windows-section {
+  display: flex; flex-direction: column;
+  flex: 1; min-height: 0;
+  border-bottom: 1px solid var(--border2);
+}
+
+.section-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border2);
+  flex-shrink: 0;
+}
+
+.windows-grid-area {
+  display: grid;
+  /* --wm-cols is set by the JS column picker (default 2).
+     minmax(0, 1fr) lets columns shrink freely — no horizontal overflow. */
+  grid-template-columns: repeat(var(--wm-cols, 4), minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px 16px;
+  overflow-x: hidden;
+  overflow-y: visible;
+  height: auto;
+  align-content: start;
+}
+.windows-grid-area::-webkit-scrollbar { width: 6px; height: 6px; }
+.windows-grid-area::-webkit-scrollbar-track { background: var(--bg2); }
+.windows-grid-area::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+/* Grid column picker */
+.grid-picker { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.grid-label  { font-family: var(--mono); font-size: 10px; color: var(--text4); margin-right: 4px; }
+.grid-btn {
+  width: 26px; height: 22px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 4px; font-family: var(--mono); font-size: 11px;
+  color: var(--text4); cursor: pointer; transition: all .12s;
+  display: flex; align-items: center; justify-content: center;
+}
+.grid-btn:hover { background: var(--bg4); color: var(--text2); }
+.grid-btn.active {
+  background: rgba(34,211,238,.15); border-color: rgba(34,211,238,.4);
+  color: var(--cyan-hi); font-weight: 700;
+}
+
+/* Intelligence Reports section */
+.reports-section {
+  display: flex; flex-direction: column;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border2);
+}
+
+.reports-hscroll {
+  display: flex; flex-direction: row; gap: 10px;
+  padding: 10px 16px;
+  overflow-x: auto; overflow-y: hidden;
+  flex-shrink: 0; align-items: stretch;
+  scrollbar-width: thin; scrollbar-color: var(--surface2) transparent;
+}
+.reports-hscroll::-webkit-scrollbar { height: 5px; }
+.reports-hscroll::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+/* Footer */
+.footer {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 16px; height: var(--footer-h);
+  background: var(--bg1); border-top: 1px solid var(--border2);
+  font-size: 10px; font-family: var(--mono); color: var(--text4);
+  flex-shrink: 0;
+}
+.uptime { color: var(--text4); }
+
+/* Shared panel primitives */
+.panel-title {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  color: var(--text3); text-transform: uppercase; letter-spacing: .08em;
+}
+.panel-badge {
+  background: var(--cyan); color: #0f172a;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px;
+}
+.panel-legend {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; color: var(--text4);
+}
+.ldot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.empty-state {
+  padding: 24px 16px; text-align: center;
+  color: var(--text4); font-size: 11px; line-height: 1.5;
+}
+
+/* Old 3-col grid — disabled */
+.main-grid { display: none !important; }
+.col-left, .col-mid, .col-right { display: none !important; }
+.panel, .graph-scroll, .windows-scroll, .reports-scroll { display: none; }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  /* grid cols handled by --wm-cols CSS var */
+  #grid-btn-3, #grid-btn-4 { display: none; }
+  .alert-stream-bar { flex-wrap: wrap; gap: 6px; }
+  .main-stack { overflow-y: auto; }
+  .windows-section { flex: none; min-height: 300px; }
+  .reports-hscroll { flex-wrap: wrap; overflow-x: hidden; overflow-y: auto; max-height: 320px; }
+  .r2-card { width: 100% !important; flex-shrink: unset; }
+  .app-shell { grid-template-rows: auto 1fr auto; overflow: hidden; }
+}
+
+@media (max-width: 768px) {
+  .windows-grid-area { padding: 8px; gap: 8px; }
+  #grid-btn-3, #grid-btn-4 { display: none; }
+  .reports-hscroll { flex-direction: column; overflow-x: hidden; overflow-y: auto; max-height: 400px; }
+  .r2-card { width: 100% !important; }
+  .slice-nav-btn { width: 22px; height: 22px; font-size: 10px; }
+}
+
+@media (max-width: 480px) {
+  .stream-next, .stream-sep { display: none; }
+}
+
+/* ── Layout: page scroll, sticky header ──────────────────────────────────── */
+
+/* html/body scroll — the whole page scrolls, not inner divs */
+html, body {
+  height: auto !important;
+  overflow: auto !important;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+html::-webkit-scrollbar { width: 6px; }
+html::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+/* App shell: natural height — grows with content */
+.app-shell {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 100dvh !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* Header: sticky at top while page scrolls */
+.header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  flex-shrink: 0;
+}
+
+/* Main stack: natural height, no internal scroll */
+.main-stack {
+  flex: none !important;
+  overflow: visible !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Windows section: natural height — shows all cards */
+.windows-section {
+  flex-shrink: 0;
+  min-height: 280px; /* always shows at least 1 row of cards */
+}
+
+/* windows-grid-area overflow handled by the primary rule above */
+
+/* Reports section: natural height */
+.reports-section { flex-shrink: 0; }
+.reports-hscroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+/* Footer: removed — content moved to header */
+.footer { display: none !important; }
+
+/* Uptime inline in header-actions */
+.uptime-inline {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text4);
+  padding: 3px 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Filter inline with section header */
+.wm-filter-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+/* wm-filter-bar inside grid is no longer needed (filter is in header) */
+.wm-filter-bar { display: none !important; }
+
+/* Pending reports queue badge */
+.pending-badge {
+  background: rgba(251,191,36,.12) !important;
+  border: 1px solid rgba(251,191,36,.35) !important;
+  color: #fcd34d !important;
+  animation: pulse-amber 1.5s ease-in-out infinite;
+}

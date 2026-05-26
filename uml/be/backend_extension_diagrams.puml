@@ -1,0 +1,629 @@
+' ═══════════════════════════════════════════════════════════════════
+' BACKEND — DIAGRAMA 1: CLASSES
+' ═══════════════════════════════════════════════════════════════════
+@startuml backend_classes
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ClassBorderColor #94a3b8
+skinparam ClassBackgroundColor #f8fafc
+skinparam ClassHeaderBackgroundColor #e2e8f0
+skinparam ClassAttributeFontColor #334155
+skinparam ClassStereotypeFontColor #64748b
+skinparam ArrowColor #64748b
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f8fafc
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title FastAPI Backend — Diagrama de Classes (UML 2.x)
+
+package "app/core" {
+  class Settings <<pydantic BaseSettings>> {
+    + LLM_PROVIDER: str
+    + LLM_PROVIDER2: str
+    + OLLAMA_MODEL: str
+    + OLLAMA_BASE_URL: str
+    + ANTHROPIC_API_KEY: str
+    + ANTHROPIC_MODEL: str
+    + OPENAI_API_KEY: str
+    + LITELLM_MODEL2: str
+    + ACTIVE_LLM_MODEL: str
+    + NVD_API_KEY: str
+    + CVE_CACHE_TTL: int
+    + LLM_TIMEOUT_SECONDS: int
+    + API_TIMEOUT_SECONDS: int
+    + MAX_TOKENS_PER_REQUEST: int
+    --
+    - _resolve_active_model(): Settings
+  }
+}
+
+package "app/services" {
+  class LLMService <<module>> {
+    --
+    + {static} _call_llm(user_prompt): Tuple[str, str]
+    + {static} analyze_cve(cve_data, detail_level): str
+    + {static} analyze_siem_alert(alert_json, detail_level): str
+    + {static} chat(messages, context): str
+    - {static} _litellm_kwargs(): dict
+  }
+
+  class CVEService <<module>> {
+    - {static} CACHE_DIR: Path
+    - {static} NVD_BASE_URL: str
+    --
+    + {static} fetch_cve(cve_id): Optional[dict]
+    - {static} _parse_cve(raw): dict
+    - {static} _cache_path(cve_id): Path
+    - {static} _is_cache_valid(path): bool
+  }
+}
+
+package "app/api" {
+  class AnalysisRouter <<FastAPI APIRouter>> {
+    --
+    + POST /360 full_analysis(body)
+  }
+
+  class CVERouter <<FastAPI APIRouter>> {
+    --
+    + GET /{cve_id}/raw get_cve_raw(cve_id)
+    + GET /{cve_id}/analyze get_cve_analysis(cve_id, level)
+  }
+
+  class SIEMRouter <<FastAPI APIRouter>> {
+    --
+    + POST /analyze analyze_alert(body)
+    + GET /mock get_mock_alert()
+  }
+
+  class HealthRouter <<FastAPI APIRouter>> {
+    --
+    + GET /health health()
+  }
+}
+
+package "app/main.py" {
+  class FastAPIApp <<FastAPI>> {
+    --
+    + GET /health health()
+    + GET /api/config get_config()
+    + GET /api/agent2/reports get_reports()
+    + GET /api/agent1/reports get_a1_reports()
+    + GET /api/graph/state get_graph_state()
+    + POST /api/v1/analysis/cve ext_cve_analysis(body)
+    + POST /api/v1/analysis/siem ext_siem_analysis(body)
+    + POST /api/v1/analysis/chat ext_chat(body)
+  }
+}
+
+class FullAnalysisRequest <<pydantic BaseModel>> {
+  + cve_id: str
+  + alert: dict
+  + detail_level: str
+}
+
+class SIEMAlertRequest <<pydantic BaseModel>> {
+  + alert: dict
+  + detail_level: str
+}
+
+' Relations
+FastAPIApp *-- AnalysisRouter : include_router\n/api/v1/analysis
+FastAPIApp *-- CVERouter : include_router\n/api/v1/cve
+FastAPIApp *-- SIEMRouter : include_router\n/api/v1/siem
+FastAPIApp *-- HealthRouter : include_router\n/api/v1
+FastAPIApp ..> Settings : <<uses>> settings
+CVERouter ..> CVEService : <<uses>>
+CVERouter ..> LLMService : <<uses>>
+SIEMRouter ..> LLMService : <<uses>>
+AnalysisRouter ..> CVEService : <<uses>>
+AnalysisRouter ..> LLMService : <<uses>>
+LLMService ..> Settings : <<reads>>\nACTIVE_LLM_MODEL\nLLM_PROVIDER
+CVEService ..> Settings : <<reads>>\nAPI_TIMEOUT_SECONDS\nNVD_API_KEY
+
+note right of Settings
+  _resolve_active_model():
+  Lê LLM_PROVIDER2 (Agent 2)
+  → ACTIVE_LLM_MODEL
+  Agent 1 = "none" (rule-based)
+  Fonte: .env via pydantic-settings
+end note
+
+note right of CVEService
+  Cache em disco:
+  data/cve_cache/{CVE-ID}.json
+  TTL = CVE_CACHE_TTL (86400s)
+  NVD API key opcional
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' BACKEND — DIAGRAMA 2: COMPONENTES
+' ═══════════════════════════════════════════════════════════════════
+@startuml backend_components
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title FastAPI Backend — Componentes e Interfaces (UML 2.x)
+
+package "FastAPI Backend :8000" {
+  component [main.py\nFastAPI App] as APP
+  component [api/cve.py\nCVE Router] as CVEROUTER
+  component [api/siem.py\nSIEM Router] as SIEMROUTER
+  component [api/analysis.py\nAnalysis Router] as AROUTER
+  component [api/health.py\nHealth Router] as HROUTER
+  component [services/cve_service.py\nCVE fetcher + cache] as CVES
+  component [services/llm_service.py\nLLM wrapper (litellm)] as LLMS
+  component [core/config.py\nSettings (pydantic)] as CFG
+
+  interface "GET /health" as IH
+  interface "GET /api/config" as IC
+  interface "GET /api/agent2/reports" as IR2
+  interface "GET /api/graph/state" as IGS
+  interface "POST /api/v1/analysis/cve" as IACVE
+  interface "POST /api/v1/analysis/siem" as IASIEM
+  interface "POST /api/v1/analysis/chat" as IACHAT
+  interface "GET /api/v1/cve/{id}/analyze" as ICVEA
+  interface "GET /api/v1/cve/{id}/raw" as ICVER
+  interface "POST /api/v1/siem/analyze" as ISIEMA
+  interface "POST /api/v1/analysis/360" as I360
+
+  APP - IH
+  APP - IC
+  APP - IR2
+  APP - IGS
+  APP - IACVE
+  APP - IASIEM
+  APP - IACHAT
+  CVEROUTER - ICVEA
+  CVEROUTER - ICVER
+  SIEMROUTER - ISIEMA
+  AROUTER - I360
+}
+
+package "LLM Runtime (externo)" {
+  component [Ollama :11434\nllama3.2 / ...] as OLLAMA
+  component [Anthropic API\nclaude-haiku-*] as ANTH
+  component [OpenAI API\ngpt-4o-mini] as OAI
+}
+
+package "NVD / NIST (externo)" {
+  component [CVE API\nservices.nvd.nist.gov] as NVD
+}
+
+package "SOC Dashboard" {
+  component [Agent 1\nHypothesisGraph] as A1
+  component [Agent 2\nReports dir] as A2R
+  component [SSE Server\n:5001] as SSE
+}
+
+package "Chrome Extension" {
+  component [popup.ts\nRedShift Agent] as POPUP
+}
+
+' Ligações internas
+APP --> CVEROUTER : include_router /api/v1/cve
+APP --> SIEMROUTER : include_router /api/v1/siem
+APP --> AROUTER : include_router /api/v1/analysis
+APP --> HROUTER : include_router /api/v1
+APP ..> CFG : settings
+CVEROUTER --> CVES : fetch_cve()
+CVEROUTER --> LLMS : analyze_cve()
+SIEMROUTER --> LLMS : analyze_siem_alert()
+AROUTER --> CVES : fetch_cve()
+AROUTER --> LLMS : analyze_cve()\nanalyze_siem_alert()
+LLMS ..> CFG : ACTIVE_LLM_MODEL\nLLM_PROVIDER
+
+' Externas
+LLMS --> OLLAMA : litellm POST\n[provider=ollama]
+LLMS --> ANTH : litellm POST\n[provider=anthropic]
+LLMS --> OAI : litellm POST\n[provider=openai]
+CVES --> NVD : httpx GET\n?cveId={id}
+
+' SOC
+APP --> A1 : get_global_graph()\nget_confirmed_hypotheses()
+APP --> A2R : lê reports JSON
+APP --> SSE : trigger_report_now()
+
+' Extension
+POPUP --> IACVE : POST /api/v1/analysis/cve
+POPUP --> IASIEM : POST /api/v1/analysis/siem
+POPUP --> IACHAT : POST /api/v1/analysis/chat
+
+note right of LLMS
+  litellm abstrai providers:
+  LLM_PROVIDER2 define qual usar.
+  Suporta Ollama (local),
+  Anthropic e OpenAI.
+  Timeout: LLM_TIMEOUT_SECONDS
+  MaxTokens: MAX_TOKENS_PER_REQUEST
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' BACKEND — DIAGRAMA 3: SEQUÊNCIA CVE ANALYSIS
+' ═══════════════════════════════════════════════════════════════════
+@startuml backend_sequence
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title FastAPI Backend — Sequência: Análise CVE + SIEM (UML 2.x)
+
+participant "Chrome\nExtension" as EXT
+participant "FastAPI\n:8000" as APP
+participant "CVEService" as CVES
+participant "LLMService\n(litellm)" as LLMS
+participant "NVD API\n(externo)" as NVD
+participant "LLM Runtime\n(externo)" as LLM
+
+== Análise CVE ==
+
+EXT -> APP : POST /api/v1/analysis/cve\n{cve_id: "CVE-2024-1234",\n level: "intermediate"}
+APP -> APP : ext_cve_analysis(body)\n validar cve_id
+
+APP -> CVES : fetch_cve("CVE-2024-1234")
+CVES -> CVES : _is_cache_valid(\n  data/cve_cache/CVE-2024-1234.json\n)
+
+alt [cache válida — age < CVE_CACHE_TTL]
+  CVES --> APP : cve_data (de disco)
+  note right of CVES
+    Cache hit:
+    leitura de JSON local
+    sem chamada à NVD API
+  end note
+else [cache inexistente ou expirada]
+  CVES -> NVD : GET /rest/json/cves/2.0\n?cveId=CVE-2024-1234
+  NVD --> CVES : vulnerabilities JSON
+  CVES -> CVES : _parse_cve(raw)\nextrair descrição, CVSS,\nafected_products, references
+  CVES -> CVES : cache_file.write_text()\nguardar em disco
+  CVES --> APP : cve_data: dict
+end
+
+APP -> LLMS : analyze_cve(cve_data, level)
+LLMS -> LLMS : construir prompt:\n• CVE ID + descrição\n• CVSS score + vector\n• affected products\n• weaknesses\n• detail_level
+
+LLMS -> LLM : litellm.acompletion(\n  model=ACTIVE_LLM_MODEL,\n  messages=[system, user],\n  max_tokens=MAX_TOKENS,\n  timeout=LLM_TIMEOUT\n)
+LLM --> LLMS : completion response
+LLMS -> LLMS : extrair text + model_used
+LLMS --> APP : analysis: str, model: str
+
+APP --> EXT : 200 OK\n{cve_id, cve_data,\n analysis, model_used}
+
+== Análise SIEM Alert ==
+
+EXT -> APP : POST /api/v1/analysis/siem\n{alert: {rule.name, severity,\n kill_chain, ...},\n detail_level: "intermediate"}
+APP -> LLMS : analyze_siem_alert(\n  alert_json, detail_level)
+LLMS -> LLMS : construir prompt:\n• alert fields\n• kill chain context\n• severity\n• detail level
+
+LLMS -> LLM : litellm.acompletion()
+LLM --> LLMS : completion
+LLMS --> APP : analysis: str, model: str
+APP --> EXT : 200 OK\n{analysis, model_used}
+
+== Chat contextual ==
+
+EXT -> APP : POST /api/v1/analysis/chat\n{messages: [{role, content}, ...]}
+APP -> LLMS : _call_llm(history_as_prompt)
+LLMS -> LLM : litellm.acompletion()
+LLM --> LLMS : reply
+APP --> EXT : 200 OK\n{reply, model_used}
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' BACKEND — DIAGRAMA 4: DEPLOYMENT
+' ═══════════════════════════════════════════════════════════════════
+@startuml backend_deployment
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam NodeBorderColor #94a3b8
+skinparam NodeBackgroundColor #f1f5f9
+skinparam NodeFontColor #0f172a
+skinparam ArtifactBorderColor #64748b
+skinparam ArtifactBackgroundColor #f8fafc
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #e2e8f0
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title FastAPI Backend — Deployment (UML 2.x)
+
+node "Servidor SOC" as HOST {
+  node "FastAPI Backend\nProcesso: uvicorn app.main:app\n127.0.0.1:8000" as API {
+    component [FastAPI App] as APP
+    component [CVE Service] as CVES
+    component [LLM Service\n(litellm)] as LLMS
+    component [Settings\n(pydantic)] as CFG
+    artifact ".env\nconfiguração" as ENV
+    artifact "data/cve_cache/\n*.json (cache NVD)" as CACHE
+    note bottom of API
+      Arrancado por run.bat [2]
+      após build da extensão.
+      Módulo: app.main:app
+      Dir: soc-dashboard/backend/
+    end note
+  }
+
+  node "SSE Server :5001" as SSE_NODE {
+    component [SSE Broker] as SSE
+  }
+
+  node "Agent 1 + Agent 2" as AGENTS {
+    component [HypothesisGraph] as HG
+    component [GraphReporter] as GR
+    artifact "reports/" as RPTS
+  }
+}
+
+node "LLM Runtime" as LLM_NODE {
+  node "Ollama :11434\n(local)" as OLLAMA_N {
+    component [llama3.2\nou outro modelo] as OLLAMACOMP
+  }
+  node "Anthropic API\n(remoto)" as ANTH_N {
+    component [claude-haiku-*] as ANTHCOMP
+  }
+}
+
+node "NVD / NIST\n(remoto)" as NVD_NODE {
+  component [CVE REST API] as NVDCOMP
+}
+
+node "Chrome Browser" as BROWSER {
+  component [RedShift Extension\n(popup.ts)] as EXT
+  component [Dashboard SPA] as DASH
+}
+
+' Ligações
+EXT --> API : POST :8000/api/v1/analysis/*\n(CVE, SIEM, Chat)
+DASH --> API : GET :8000/health\nGET :8000/api/config
+API --> SSE_NODE : emit ciso_report\n(via trigger_report_now)
+API --> AGENTS : get_global_graph()\nread reports/
+
+CFG ..> ENV : pydantic-settings\ncarrega .env
+CVES ..> CACHE : lê/escreve cache
+LLMS --> OLLAMA_N : litellm POST\n[provider=ollama]
+LLMS --> ANTH_N : litellm POST\n[provider=anthropic]
+CVES --> NVD_NODE : httpx GET
+
+note right of CFG
+  LLM_PROVIDER2 define o modelo activo
+  para análise (CVE, SIEM, Chat).
+  LLM_PROVIDER = "none" (Agent 1
+  é rule-based, não usa LLM aqui).
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' EXTENSÃO — DIAGRAMA 5: COMPONENTES
+' ═══════════════════════════════════════════════════════════════════
+@startuml extension_components
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title RedShift CVE Agent — Componentes e Interfaces (UML 2.x)
+
+package "Chrome Extension (dist/)" {
+
+  component [popup.ts\nUI principal (5 tabs)] as POPUP
+  component [content.ts\nContent Script\n(injected em localhost:5001)] as CONTENT
+  component [background.ts\nService Worker] as BG
+
+  interface "chrome.storage.local" as ISTORAGE
+  interface "chrome.runtime.sendMessage" as IMSG
+  interface "chrome.runtime.onMessage" as IONMSG
+  interface "window.postMessage()" as IPOST
+  interface "chrome.action.setBadgeText" as IBADGE
+
+  POPUP - ISTORAGE
+  POPUP - IMSG
+  BG - IONMSG
+  BG - IBADGE
+  CONTENT - IPOST
+  CONTENT - IMSG
+  CONTENT - ISTORAGE
+}
+
+package "Dashboard SPA (localhost:5001)" {
+  component [windows_panel.ts\n__wmPushAlertToExtension()] as WP
+  component [main.ts\n_pushWindowContextToExtension()] as MAIN_SPA
+  interface "window.addEventListener('message')" as ILISTEN
+  WP - ILISTEN
+  MAIN_SPA - ILISTEN
+}
+
+package "FastAPI Backend (:8000)" {
+  interface "GET /health" as IHEALTH
+  interface "GET /api/config" as ICONFIG
+  interface "POST /api/v1/analysis/cve" as ICVE_A
+  interface "POST /api/v1/analysis/siem" as ISIEM_A
+  interface "POST /api/v1/analysis/chat" as ICHAT_A
+}
+
+' Comunicação
+MAIN_SPA --> IPOST : window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*')
+WP --> IPOST : window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*')\n[ao clicar pin trigger]
+
+CONTENT --> ILISTEN : addEventListener('message')\n[filtra REDSHIFT_WINDOW_CONTEXT]
+CONTENT --> ISTORAGE : chrome.storage.local.set(\n  pendingWindowContext)
+CONTENT --> IMSG : sendMessage(\n  CVE_DETECTED /\n  WINDOW_CONTEXT_READY)
+
+BG --> IONMSG : onMessage.addListener()
+BG --> IBADGE : setBadgeText(count)\nsetBadgeBackgroundColor()
+
+POPUP --> ISTORAGE : get pendingWindowContext\nget pendingCve\nget settings\nget sessions
+POPUP --> IMSG : sendMessage(CLEAR_BADGE)
+
+POPUP --> IHEALTH : checkBackendStatus()
+POPUP --> ICONFIG : fetchBackendConfig()
+POPUP --> ICVE_A : fetchCveAnalysis()
+POPUP --> ISIEM_A : handleSiemAnalyze()
+POPUP --> ICHAT_A : handleChatSend()
+
+note right of CONTENT
+  Try/catch em todas as
+  chrome.runtime.* calls —
+  suporta extension context
+  invalidation após reload
+end note
+
+note right of BG
+  Mensagens tratadas:
+  • CVE_DETECTED → badge count
+  • WINDOW_CONTEXT_READY → badge ▸
+  • OPEN_WITH_CVE → badge !
+  • CLEAR_BADGE → limpa badge
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' EXTENSÃO — DIAGRAMA 6: SEQUÊNCIA COMPLETA
+' ═══════════════════════════════════════════════════════════════════
+@startuml extension_sequence
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title RedShift CVE Agent — Sequência: Fluxo Completo (UML 2.x)
+
+actor Analista as UI
+participant "Dashboard SPA\n(windows_panel)" as DASH
+participant "content.ts\n(Content Script)" as CT
+participant "background.ts\n(Service Worker)" as BG
+participant "popup.ts\n(Extension UI)" as POPUP
+participant "FastAPI\n:8000" as API
+
+== Inicialização da Extensão ==
+
+POPUP -> API : GET /health {timeout: 4s}
+API --> POPUP : {status:"ok", model:"ollama/llama3.2",\n provider:"ollama"}
+POPUP -> POPUP : footerLabel = "Modelo: llama3.2"
+POPUP -> API : GET /api/config {timeout: 4s}
+API --> POPUP : {model, active_model,\n llm_provider, llm_timeout_seconds}
+POPUP -> POPUP : applyBackendConfigToSettings()
+POPUP -> POPUP : consumePendingWindowContext()\nconsumePendingCve()
+
+== Push de contexto SOC (prob ≥ 75%) ==
+
+DASH -> DASH : _pushWindowContextToExtension(w)\n[ou __wmPushAlertToExtension(el)]
+DASH -> CT : window.postMessage(\n  type: REDSHIFT_WINDOW_CONTEXT,\n  {windowId, label, probability,\n   tier, cves, iocs, phases,\n   assets, siemAlert}, '*')
+
+CT -> CT : event.origin verificado
+CT -> CT : chrome.storage.local.set(\n  {pendingWindowContext: ctx})
+
+alt [cves.length > 0]
+  CT -> BG : sendMessage({type: CVE_DETECTED,\n cveIds: [...]})
+  BG -> BG : setBadgeText(count)\nsetBadgeBackgroundColor('#e8192c')
+else [sem CVEs]
+  CT -> BG : sendMessage({type: WINDOW_CONTEXT_READY})
+  BG -> BG : setBadgeText('▸')\nsetBadgeBackgroundColor('#f97316')
+end
+
+== Analista abre o popup ==
+
+UI -> POPUP : clica no ícone da extensão
+POPUP -> POPUP : consumePendingWindowContext()
+POPUP -> POPUP : chrome.storage.local.get(\n  pendingWindowContext)
+POPUP -> POPUP : renderWindowContext(ctx)\n→ card SOC com tier, label,\n  probabilidade, CVEs, IoCs,\n  fases, botão "Analisar no SIEM"
+
+opt [siemAlert presente]
+  POPUP -> POPUP : botão "📊 Analisar no SIEM"\npré-preenchido e auto-click
+end
+
+== Tab CVE — análise manual ==
+
+UI -> POPUP : digita "CVE-2024-1234"\nclica "Analisar"
+POPUP -> POPUP : handleCveAnalyze()\nvalidar formato CVE-XXXX-XXXXX
+POPUP -> API : POST /api/v1/analysis/cve\n{cve_id, level: "intermediate"}
+note right of API
+  FastAPI:
+  1. fetch_cve() → NVD ou cache
+  2. analyze_cve() → LLM
+  Pode demorar 5-60s
+  conforme LLM e cache
+end note
+API --> POPUP : {cve_id, cve_data:\n  {id, cvss, description,\n   affected_products},\n analysis, model_used}
+POPUP -> POPUP : renderCveResult(data)\nmostrar CVSS, análise LLM,\nMITRE tags, sessão guardada
+
+== Tab SIEM — análise de alerta ==
+
+UI -> POPUP : cola JSON de alerta\nclica "Analisar Alerta"
+POPUP -> API : POST /api/v1/siem/analyze\n{alert: {rule.name, severity,\n kill_chain, ...},\n detail_level}
+API --> POPUP : {analysis, model_used}
+POPUP -> POPUP : renderSiemResult()\nmostrar análise estruturada
+
+== Tab Chat — assistente contextual ==
+
+UI -> POPUP : envia mensagem de chat
+POPUP -> POPUP : appendChatMsg('user', msg)\nappendChatTyping()
+POPUP -> API : POST /api/v1/analysis/chat\n{messages: [{role, content},...]}
+API --> POPUP : {reply, model_used}
+POPUP -> POPUP : removeTyping()\nappendChatMsg('agent', reply)\nsaveSession()
+@enduml

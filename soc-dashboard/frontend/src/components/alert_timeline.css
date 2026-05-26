@@ -1,0 +1,96 @@
+/* alert_timeline.css */
+
+.timeline-strip-panel {
+ border-top: 1px solid var(--border2);
+ border-bottom: 1px solid var(--border2);
+ background: var(--bg1);
+ flex-shrink: 0;
+ margin: 0;
+ overflow: hidden;
+ min-width: 0;
+ width: 100%;
+ display: flex;
+ flex-direction: column;
+ position: relative;
+}
+
+.timeline-strip-header {
+ display: flex; 
+ align-items: center; 
+ gap: 8px;
+ padding: 2px 16px;
+ border-bottom: 1px solid rgba(148,163,184,.08);
+ min-height: 0;
+ flex-shrink: 0;
+}
+
+/* SCROLL CONTAINER - FIX para scroll horizontal visível */
+.timeline-strip-scroll {
+ display: block;
+ width: 100%;
+ overflow-x: auto;
+ overflow-y: hidden;
+ position: relative;
+ flex: 1;
+ min-height: 0;
+ /* Força a barra de scroll a aparecer */
+ overflow-x: scroll !important;
+ -webkit-overflow-scrolling: touch;
+}
+
+/* Inner wrapper - CRÍTICO: força o scroll baseado no conteúdo */
+.timeline-scroll-inner {
+ display: inline-block;
+ min-width: 100%;
+ height: 100%;
+}
+
+/* SVG - tamanho controlado pelo atributo width */
+.timeline-strip-scroll svg {
+ display: block;
+ height: auto;
+ /* O SVG define sua própria largura via atributo width */
+}
+
+/* Scrollbar styling - VISÍVEL mesmo em janelas pequenas */
+.timeline-strip-scroll {
+ scrollbar-width: thin;
+ scrollbar-color: var(--surface2) rgba(0,0,0,.15);
+}
+
+.timeline-strip-scroll::-webkit-scrollbar {
+ height: 8px !important;  /* Altura fixa para garantir visibilidade */
+ width: 8px !important;
+}
+
+.timeline-strip-scroll::-webkit-scrollbar-track {
+ background: rgba(0,0,0,.1) !important;
+ border-radius: 4px !important;
+}
+
+.timeline-strip-scroll::-webkit-scrollbar-thumb {
+ background: var(--surface2) !important;
+ border-radius: 4px !important;
+ min-height: 20px !important;
+}
+
+.timeline-strip-scroll::-webkit-scrollbar-thumb:hover {
+ background: var(--text4) !important;
+}
+
+/* Garante que o scroll container nunca esconda o overflow horizontal */
+#timeline-content,
+.timeline-strip-scroll {
+ max-width: 100%;
+ min-width: 0;
+ width: 100%;
+}
+
+.timeline-empty-state {
+ display: flex; 
+ align-items: center; 
+ gap: 2px;
+ padding: 2px 4px; 
+ color: var(--text4); 
+ font-size: 10px;
+}

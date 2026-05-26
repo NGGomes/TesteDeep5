@@ -1,0 +1,99 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 5 — ACTIVIDADE Classificação CISO
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent1_activity
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #e2e8f0
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #94a3b8
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Diagrama de Actividade: Classificação CISO
+
+|Dashboard (Analista)|
+start
+:requestProcessAlert(index);
+
+|SSE Server|
+:POST /agent1/callback;
+
+|main.py|
+:enqueue(alert)\n_alert_queue.put();
+:parse {Category, Type,\nSeverity, Timestamp};
+
+|WindowManager|
+:get_phase(Category, Type);
+note right
+  Mapeamento kill-chain:
+  RECON=5, INITIAL_ACCESS=10,
+  EXECUTION=15, PERSISTENCE=15,
+  LATERAL_MOVEMENT=20,
+  EXFILTRATION=25, IMPACT=30
+end note
+
+if (janela activa\npara este timestamp?) then (sim)
+  :AdaptiveWindow.add_alert();
+  if (weight ≥ 5\nAND mode=adaptive?) then (sim)
+    :_try_extend(phase, weight)\nexpires_at += weight min;
+  else (não)
+  end if
+else (não)
+  :new AdaptiveWindow(trigger)\nemit window_created;
+end if
+
+|AdaptiveWindow|
+:_update_ciso_options();
+
+|ProbabilisticClassifier|
+:predict(phases, priors)\nP(H|phases) × priors;
+:normalizar → top-3\n(label, probability, risk_tier);
+
+|AdaptiveWindow|
+fork
+  :_check_convergence();
+  if (prob≥0.97 AND n≥1\nOU prob≥0.85 AND n≥3?) then (sim)
+    :is_closed = True\nclose_reason = "convergence";
+    |HypothesisGraph|
+    :add_evidence()\n_apply_decay()\n_update_edges();
+    |SSE Server|
+    :emit window_closed;
+  else (não)
+    if (prob ≥ 0.75?) then (sim)
+      :request_operator_validation()\nvalidation_requested = True;
+      |SSE Server|
+      :emit window_updated\n{ciso_options, timer}
+      |Dashboard (Analista)|
+      :mostrar botões confirmação\ntimer 120s;
+    else (não)
+      |SSE Server|
+      :emit window_updated;
+    end if
+  end if
+fork again
+  :emit alert SSE\n(alertas não emitidos);
+end fork
+
+|HypothesisGraph|
+:auto_confirm_timeouts()\nverifica pending expirados;
+
+|main.py|
+:emit agent1_progress\nemit next_alert_info;
+
+|Dashboard (Analista)|
+:actualizar timeline\natualizar janelas activas;
+stop
+@enduml

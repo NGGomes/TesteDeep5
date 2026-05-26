@@ -1,0 +1,17 @@
+/*
+ * style.css — Root CSS orchestrator.
+ * Importado em src/main.ts via:  import "./style.css"
+ *
+ * Carrega o tema global e os CSS de layout/header que vivem em src/.
+ * Os CSS dos componentes são importados directamente nos respectivos .ts.
+ * Não adicionar regras aqui — editar o ficheiro do componente correspondente.
+ */
+
+/* 1. Design tokens globais — variáveis CSS usadas por todos os componentes */
+@import './styles/theme.css';
+
+/* 2. Shell e grid principal da aplicação */
+@import './layout.css';
+
+/* 3. Header (brand, KPIs, live pill, hdr-btn) */
+@import './header.css';

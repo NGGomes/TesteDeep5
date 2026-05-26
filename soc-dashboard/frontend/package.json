@@ -1,0 +1,17 @@
+{
+  "name": "soc-dashboard",
+  "version": "1.0.0",
+  "description": "SOC Real-Time Alert Dashboard for projD CISO Reclassification",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}

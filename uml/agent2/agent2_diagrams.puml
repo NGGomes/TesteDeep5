@@ -1,0 +1,662 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 1 — CLASSES
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_classes
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ClassBorderColor #94a3b8
+skinparam ClassBackgroundColor #f8fafc
+skinparam ClassFontColor #0f172a
+skinparam ClassHeaderBackgroundColor #e2e8f0
+skinparam ClassAttributeFontColor #334155
+skinparam ClassStereotypeFontColor #64748b
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f8fafc
+
+title Agent 2 — Diagrama de Classes (UML 2.x)
+
+package "agent2" {
+
+  class GraphReporter {
+    - _last_processed_confirmation_ms: float
+    - _generated_reports: List[Dict]
+    - _lock: RLock
+    - _running: bool
+    - _poll_interval: int
+    - _pending_queue: Dict
+    - _queue_lock: Lock
+    - _processed_confirmations: Set[str]
+    - {static} _QUEUE_FILE: Path
+    --
+    + run(): void
+    + stop(): void
+    + trigger_report_now(label, score, ts, tier, method): bool
+    - _get_graph(): HypothesisGraph
+    - _get_new_confirmations(): List[Tuple]
+    - _get_graph_context(): Dict
+    - _generate_ciso_report(confirmed, context): Dict
+    - _get_recommendations(tier, confirmed, context): List[str]
+    - _get_regulatory_impact(tier): Dict
+    - _save_report(report): Path
+    - _emit_report(report): bool
+    - _auto_confirm_timeouts(): void
+    - _enqueue(label, score, ts, tier, method): void
+    - _dequeue_success(label): void
+    - _process_queue(): void
+    - _load_queue(): Dict
+    - _save_queue(): void
+  }
+
+  class AlertLoader <<utility>> {
+    - {static} _cache: Dict[str, Dict]
+    - {static} _cache_lock: Lock
+    --
+    + {static} get_alerts_by_ids(alert_ids): List[Dict]
+    - {static} _build_cache(): Dict
+    + {static} invalidate(): void
+  }
+
+  class IncidentAnalyzer <<utility>> {
+    --
+    + {static} analyze_incident(\n  ciso_options, phases, alert_count,\n  assets, cves, iocs,\n  mitre_techniques): Optional[Dict]
+    - {static} _fallback_analysis(\n  ciso_options, phases, alert_count): Dict
+  }
+
+  class DataExtractor <<utility>> {
+    --
+    + {static} extract_assets(alerts): List[str]
+    + {static} extract_cves(alerts): List[str]
+    + {static} extract_ioc_bundle(alerts): Dict
+  }
+
+  class MITREMapper <<utility>> {
+    --
+    + {static} get_techniques_for_phases(\n  phases): List[Dict]
+  }
+
+  class CISOReportGenerator {
+    --
+    + generate(metadata, analysis): str
+    - _format_timestamp(metadata, ms_key, *iso_keys): str
+    - _get_metadata_value(metadata, *keys): str
+    - _build_timeline_rows(timeline): str
+  }
+
+  class SOCReportGenerator {
+    --
+    + generate(metadata, analysis): str
+    - _format_timestamp(metadata, ms_key, *iso_keys): str
+    - _build_timeline_rows(timeline): str
+  }
+
+  class CVERepository <<utility>> {
+    --
+    + {static} get_cve_details(cve_id): Optional[Dict]
+  }
+
+}
+
+' Relações
+GraphReporter ..> AlertLoader : <<uses>>
+GraphReporter ..> IncidentAnalyzer : <<uses>>\n[_HAS_LLM]
+GraphReporter ..> DataExtractor : <<uses>>\n[_HAS_ANALYZERS]
+GraphReporter ..> CISOReportGenerator : <<uses>>\n[_HAS_LATEX]
+GraphReporter ..> SOCReportGenerator : <<uses>>\n[_HAS_LATEX]
+IncidentAnalyzer ..> MITREMapper : <<uses>>
+IncidentAnalyzer ..> CVERepository : <<uses>>
+
+note right of GraphReporter
+  Singleton — registado via
+  _set_global_reporter()
+  Acedido via
+  get_global_reporter()
+end note
+
+note bottom of AlertLoader
+  Cache em memória indexada
+  por Number e alert_id
+  Lida do dataset original
+end note
+
+note bottom of IncidentAnalyzer
+  Prompt estruturado →
+  LLM (Ollama/Anthropic/OpenAI)
+  → JSON validado
+  Fallback rule-based se LLM indisponível
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 2 — COMPONENTES E INTERFACES
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_components
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam ComponentFontColor #0f172a
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 2 — Diagrama de Componentes e Interfaces (UML 2.x)
+
+package "Agent 2 — Graph Reporter" {
+  component [GraphReporter\nThread de polling] as GR
+  component [AlertLoader\nCache de alertas] as AL
+  component [IncidentAnalyzer\nLLM wrapper] as IA
+  component [DataExtractor\nIoC / Asset / CVE] as DE
+  component [CISOReportGenerator\nLaTeX CISO] as CG
+  component [SOCReportGenerator\nLaTeX SOC] as SG
+  component [MITREMapper\nATT&CK mapping] as MM
+
+  interface "IConfirmations\nget_confirmed_hypotheses()" as ICONF
+  interface "IGraphContext\nget_graph_state()" as IGCTX
+  interface "IAlertData\nget_alerts_by_ids()" as IALERT
+  interface "ILLMAnalysis\nanalyze_incident()" as ILLM
+  interface "ILaTeX\ngenerate()" as ILATEX
+  interface "IPendingQueue\n.pending_queue.json" as IQUEUE
+
+  GR - ICONF
+  GR - IGCTX
+  AL - IALERT
+  IA - ILLM
+  CG - ILATEX
+  SG - ILATEX
+  GR - IQUEUE
+}
+
+package "Agent 1 — Partilhado" {
+  component [HypothesisGraph\nSingleton] as HG
+  component [Dataset .txt] as DS
+
+  interface "IGraph\nget_global_graph()" as IHG
+  HG - IHG
+  DS ..> AL : <<lê na startup>>
+}
+
+package "SSE Server :5001" {
+  component [SSE Broker] as SSE
+  interface "POST /ingest" as IINGEST
+  SSE - IINGEST
+}
+
+package "Texer / LaTeX :5002" {
+  component [pdflatex] as LATEX
+  interface "compilação .tex → .pdf" as ICOMPILE
+  LATEX - ICOMPILE
+}
+
+package "LLM Runtime" {
+  component [Ollama / Anthropic\n/ OpenAI] as LLM
+  interface "POST /api/generate\n/ /v1/messages" as ILLMAPI
+  LLM - ILLMAPI
+}
+
+package "Saída / Artefactos" {
+  artifact "graph_report_*_ciso.pdf" as CPDF
+  artifact "graph_report_*_soc.pdf" as SPDF
+  artifact "graph_report_*.json" as JSON
+  artifact ".pending_queue.json" as QFILE
+}
+
+' Ligações
+GR --> IHG : <<poll cada 2s>>
+GR --> IALERT : get_alerts_by_ids()
+GR --> ILLM : analyze_incident()
+GR --> ILATEX : generate(metadata, analysis)
+GR --> IINGEST : emit ciso_report
+GR --> IQUEUE : persist / restore
+
+IA --> ILLMAPI : <<HTTP POST>>\nLLM_PROVIDER2
+CG --> ICOMPILE : compila .tex
+SG --> ICOMPILE : compila .tex
+
+GR ..> JSON : <<cria>>
+GR ..> QFILE : <<persiste>>
+CG ..> CPDF : <<gera>>
+SG ..> SPDF : <<gera>>
+
+note right of GR
+  Dois caminhos de activação:
+  1. trigger_report_now()
+     chamado pelo SSE Server
+     após confirmação manual
+  2. run() poll loop
+     detecta confirmações novas
+     via get_confirmed_hypotheses()
+end note
+
+note right of IA
+  Flags de disponibilidade:
+  _HAS_LLM      — LLM activo
+  _HAS_LATEX    — LaTeX activo
+  _HAS_ANALYZERS — DataExtractor activo
+  Degradação graciosa se ausentes
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 3 — SEQUÊNCIA
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_sequence
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title Agent 2 — Diagrama de Sequência: Geração de Relatório (UML 2.x)
+
+participant "SSE Server\n:5001" as SSE
+participant "GraphReporter\n(Thread)" as GR
+participant "HypothesisGraph\n[Agent 1]" as HG
+participant "AlertLoader" as AL
+participant "DataExtractor" as DE
+participant "IncidentAnalyzer\n[LLM]" as IA
+participant "CISOGenerator\nSOCGenerator" as LG
+participant "Texer :5002" as TX
+participant "Dashboard" as DASH
+
+== Caminho 1: trigger_report_now() — imediato após confirmação ==
+
+SSE -> GR : trigger_report_now(\n  label, score, ts, tier, "operator")
+GR -> GR : _enqueue(label, ...)\npersiste .pending_queue.json
+note right of GR
+  A fila garante entrega mesmo
+  se LLM falhar — o poll loop
+  reprocessa na próxima iteração
+end note
+GR -> GR : _process_queue()
+
+== Caminho 2: run() poll loop (cada 2s) ==
+
+GR -> HG : get_confirmed_hypotheses(\n  since_ms=_last_processed_ms)
+HG --> GR : List[Tuple[label, score, ts, tier, method]]
+GR -> GR : _enqueue() para novos
+GR -> GR : _process_queue()
+
+== _process_queue() — geração efectiva ==
+
+GR -> HG : get_graph_state()\nget_kill_chain_progress()\nget_window_evidence_summary()
+HG --> GR : context: Dict
+
+GR -> HG : get_alert_ids_for_confirmations(\n  confirmed_labels)
+HG --> GR : alert_ids: List[str]
+
+GR -> AL : get_alerts_by_ids(alert_ids)
+AL -> AL : _build_cache() se necessário\n(lê dataset .txt)
+AL --> GR : raw_alerts: List[Dict]
+
+alt [_HAS_ANALYZERS == True]
+  GR -> DE : extract_assets(raw_alerts)
+  DE --> GR : assets: List[str]
+  GR -> DE : extract_cves(raw_alerts)
+  DE --> GR : cves: List[str]
+  GR -> DE : extract_ioc_bundle(raw_alerts)
+  DE --> GR : ioc_bundle: Dict\n{ipv4, fqdns, executables, cve_ids}
+end
+
+alt [_HAS_LLM == True]
+  GR -> IA : analyze_incident(\n  ciso_options, phases,\n  alert_count, assets,\n  cves, iocs, mitre)
+  IA -> IA : construir prompt estruturado
+  IA -> IA : _call_llm(prompt, max_tokens=1200)\ntimeout=120s
+  IA --> GR : llm_analysis: Dict\n{executive_summary, business_impact,\n mitre_techniques, recommended_actions,\n regulatory_impact, risk_tier}
+else [LLM indisponível]
+  GR -> IA : _fallback_analysis()
+  IA --> GR : análise rule-based
+end
+
+GR -> GR : _generate_ciso_report(confirmed, context)\nassemblar report: Dict\n{metadata, decision, ciso_report,\n soc_report, confirmed_hypotheses,\n recommended_actions, regulatory_impact}
+
+alt [_HAS_LATEX == True]
+  GR -> LG : CISOReportGenerator.generate(\n  metadata, analysis)
+  LG --> GR : ciso_tex: str
+  GR -> TX : POST /generate {tex: ciso_tex}
+  TX --> GR : ciso.pdf path
+  GR -> LG : SOCReportGenerator.generate(\n  metadata, analysis)
+  LG --> GR : soc_tex: str
+  GR -> TX : POST /generate {tex: soc_tex}
+  TX --> GR : soc.pdf path
+end
+
+GR -> GR : _save_report(report)\ngraph_report_YYYYMMDD_HHMMSS.json
+
+GR -> GR : _emit_report(report)\nPOST /ingest {type: "ciso_report"}
+GR -> SSE : POST :5001/ingest\n{type: "ciso_report", payload: report}
+SSE --> DASH : event: ciso_report
+DASH --> DASH : card no Intelligence Reports\nbadge ⏳ desaparece
+
+GR -> GR : _dequeue_success(label)\nremove de .pending_queue.json
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 4 — MÁQUINA DE ESTADOS
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_states
+!theme plain
+skinparam roundcorner 10
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam StateBorderColor #94a3b8
+skinparam StateBackgroundColor #f8fafc
+skinparam StateFontColor #0f172a
+skinparam StateAttributeFontColor #475569
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #1e293b
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 2 — Máquina de Estados: Ciclo de Vida do Relatório (UML 2.x)
+
+[*] --> Inactivo : inicialização\n/ _load_queue()
+
+state Inactivo {
+  Inactivo : entry / carregar .pending_queue.json
+  Inactivo : do    / aguardar confirmação
+}
+
+Inactivo --> EmFila : confirmação recebida\n[_enqueue(label)]\n/ persistir .pending_queue.json
+
+state EmFila {
+  EmFila : entry / _pending_queue[label] = entry
+  EmFila : do    / aguardar _process_queue()
+  EmFila : entry / attempts = 0
+}
+
+EmFila --> AProcessar : _process_queue() chamado\n[label in _pending_queue]
+
+state AProcessar {
+  AProcessar : entry / attempts += 1
+  AProcessar : do    / contexto + alertas + extracção
+  AProcessar : do    / LLM analyze_incident()
+  AProcessar : do    / assemblar report Dict
+}
+
+AProcessar --> AGerarPDF : [_HAS_LATEX == True]\n/ CISOGenerator + SOCGenerator
+
+state AGerarPDF {
+  AGerarPDF : do / CISOReportGenerator.generate()
+  AGerarPDF : do / SOCReportGenerator.generate()
+  AGerarPDF : do / POST :5002/generate (pdflatex)
+}
+
+AGerarPDF --> AEmitir : PDF gerado com sucesso
+AProcessar --> AEmitir : [_HAS_LATEX == False]
+
+state AEmitir {
+  AEmitir : do / _emit_report()\n       POST :5001/ingest\n       {type: "ciso_report"}
+}
+
+AEmitir --> Concluido : [SSE /ingest retorna ok=True]
+AEmitir --> EmFila : [SSE /ingest falhou]\n/ manter em fila para retry
+
+state Concluido {
+  Concluido : entry / _dequeue_success(label)
+  Concluido : entry / _processed_confirmations.add(label)
+  Concluido : entry / guardar JSON em reports/agent2/
+  Concluido : entry / emit ciso_report SSE → Dashboard
+}
+
+Concluido --> Inactivo : / aguardar próxima confirmação
+
+AProcessar --> EmFila : [excepção LLM ou timeout]\n/ manter em fila\n  retry na próxima iteração
+
+note right of EmFila
+  Fila persistida em disco:
+  .pending_queue.json
+  Sobrevive a reinícios.
+  Cada entrada tem attempts
+  para auditoria de retries.
+end note
+
+note right of AProcessar
+  Módulos opcionais:
+  [_HAS_LLM] — análise LLM
+  [_HAS_ANALYZERS] — IoC/assets
+  [_HAS_LATEX] — PDF
+  Degradação graciosa se ausentes.
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 5 — ACTIVIDADE: GERAÇÃO DO RELATÓRIO
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_activity
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #e2e8f0
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #94a3b8
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 2 — Diagrama de Actividade: Pipeline de Geração de Relatório (UML 2.x, swimlanes)
+
+|GraphReporter|
+start
+:Confirmação recebida\n{label, score, ts, tier, method};
+
+:_enqueue(label)\npersistir .pending_queue.json;
+
+:_get_graph_context()\n→ kill_chain_progress,\n  top_hypotheses,\n  window_evidence_summary;
+
+|AlertLoader|
+:get_alert_ids_for_confirmations(\n  confirmed_labels);
+:_build_cache() se necessário\n(lê dataset .txt uma vez);
+:get_alerts_by_ids(alert_ids)\n→ raw_alerts: List[Dict];
+
+|DataExtractor|
+if (_HAS_ANALYZERS?) then (sim)
+  fork
+    :extract_assets(raw_alerts)\n→ hostnames, IPs de activos;
+  fork again
+    :extract_cves(raw_alerts)\n→ CVE-XXXX-XXXXX ids;
+  fork again
+    :extract_ioc_bundle(raw_alerts)\n→ {ipv4, fqdns,\n   executables, cve_ids};
+  end fork
+  :deduplicar IoCs;
+else (não)
+  :assets = []\ncves = []\niocs = [];
+end if
+
+|IncidentAnalyzer|
+if (_HAS_LLM?) then (sim)
+  :construir prompt estruturado:\n• kill chain phases\n• CISO classifications\n• assets, CVEs, IoCs\n• alert count;
+  :_call_llm(prompt)\ntimeout = AGENT2_TIMEOUT_SECONDS\nmax_tokens = AGENT2_MAX_TOKENS;
+  if (resposta válida\ne JSON parseável?) then (sim)
+    :llm_analysis = {\n  executive_summary,\n  business_impact,\n  mitre_techniques,\n  recommended_actions,\n  regulatory_impact,\n  risk_tier\n};
+  else (não — JSON inválido ou timeout)
+    :_fallback_analysis()\nrule-based sem LLM;
+  end if
+else (não)
+  :_fallback_analysis()\nrule-based sem LLM;
+end if
+
+|GraphReporter|
+:assemblar report Dict:\n──────────────────────\nmetadata {agent, generated_at,\n  confirmation_method, window_id,\n  alert_count, phases, window_start/end}\ndecision {selected_hypothesis,\n  all_hypotheses, decision_method}\nciso_report {executive_summary,\n  top_risk_tier, strategic_recommendations,\n  regulatory_implications, business_impact}\nsoc_report {raw_alerts, trigger_events,\n  affected_assets, ioc_bundle,\n  kill_chain_phases, mitre_techniques}\nexecutive_summary\nconfirmed_hypotheses\nrecommended_actions\nregulatory_impact;
+
+|CISOReportGenerator|
+if (_HAS_LATEX?) then (sim)
+  fork
+    :CISOReportGenerator.generate(\n  metadata, analysis)\n→ ciso_XXXXXX.tex;
+    :POST :5002/generate {tex}\n→ ciso_XXXXXX.pdf;
+  fork again
+    :SOCReportGenerator.generate(\n  metadata, analysis)\n→ soc_XXXXXX.tex;
+    :POST :5002/generate {tex}\n→ soc_XXXXXX.pdf;
+  end fork
+  :report["metadata"]["tex_file"] = path\nreport["metadata"]["pdf_file"] = path;
+else (não)
+end if
+
+|GraphReporter|
+:_save_report()\ngraph_report_YYYYMMDD_HHMMSS.json\nem reports/agent2/;
+
+:_emit_report()\nPOST :5001/ingest\n{type: "ciso_report", payload};
+
+if (ok == True?) then (sim)
+  :_dequeue_success(label)\nremove de .pending_queue.json\n_processed_confirmations.add(label);
+else (não — SSE falhou)
+  :manter em fila\nretry na próxima iteração\ndo poll loop;
+end if
+stop
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 6 — DEPLOYMENT
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_deployment
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam NodeBorderColor #94a3b8
+skinparam NodeBackgroundColor #f1f5f9
+skinparam NodeFontColor #0f172a
+skinparam ArtifactBorderColor #64748b
+skinparam ArtifactBackgroundColor #f8fafc
+skinparam ArtifactFontColor #334155
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #e2e8f0
+skinparam ComponentFontColor #0f172a
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 2 — Diagrama de Deployment (UML 2.x)
+
+node "Servidor SOC" as HOST {
+
+  node "Agent 2\nProcesso: agent2/graph_reporter.py" as A2 {
+    component [GraphReporter\n(Main Thread)] as GR
+    component [AlertLoader\n(Cache em memória)] as AL
+    component [IncidentAnalyzer] as IA
+    component [DataExtractor] as DE
+    component [CISOReportGenerator] as CG
+    component [SOCReportGenerator] as SG
+    artifact ".pending_queue.json\n(fila persistente)" as QFILE
+    artifact "graph_report_*_ciso.tex" as CTEX
+    artifact "graph_report_*_soc.tex" as STEX
+    note bottom of A2
+      Arrancado pelo launcher.py
+      via importlib.exec_module()
+      Thread daemon — para com o pai
+    end note
+  }
+
+  node "SSE Server\nProcesso: sse_server.py :5001" as SSE_NODE {
+    component [SSE Broker] as SSE
+    component [HTTP Handler] as SSEH
+  }
+
+  node "Texer / LaTeX\nProcesso: server_texer.py :5002" as TEX_NODE {
+    component [pdflatex\nReportGenerator] as TEX
+    artifact "graph_report_*_ciso.pdf" as CPDF
+    artifact "graph_report_*_soc.pdf" as SPDF
+    note bottom of TEX_NODE
+      Requer: pdflatex (MiKTeX/TeX Live)
+      Recebe .tex, devolve path .pdf
+    end note
+  }
+
+  node "Agent 1\nProcesso: agent1/main.py" as A1_NODE {
+    component [HypothesisGraph\n(Singleton partilhado)] as HG
+    artifact "hypothesis_graph.json" as HGFILE
+    artifact "dataset.txt\n(alertas de entrada)" as DS
+  }
+
+  node "reports/" as REPORTS {
+    artifact "agent2/\ngraph_report_*.json" as JSON
+    artifact "agent2/\ngraph_report_*_ciso.pdf" as RPDF
+    artifact "agent2/\ngraph_report_*_soc.pdf" as RSPDF
+    artifact "agent1/\n.pending_queue.json" as RQUEUE
+  }
+
+}
+
+node "LLM Runtime\n(local ou remoto)" as LLM_NODE {
+  component [Ollama :11434\n/ Anthropic API\n/ OpenAI API] as LLM
+}
+
+node "Browser" as BROWSER {
+  component [Dashboard SPA] as DASH
+}
+
+' Dependências internas
+GR ..> HG : <<shared memory>>\nget_global_graph()\npoll 2s
+GR --> SSE_NODE : POST :5001/ingest\nciso_report event
+GR --> TEX_NODE : POST :5002/generate\n{tex content}
+GR ..> DS : lê via AlertLoader\nna startup
+
+' Artefactos
+GR -down-> QFILE : persiste fila
+TEX -down-> CPDF : gera
+TEX -down-> SPDF : gera
+CG --> CTEX : gera .tex
+SG --> STEX : gera .tex
+GR -down-> JSON : _save_report()
+CPDF -down-> RPDF : copia para reports/
+SPDF -down-> RSPDF : copia para reports/
+QFILE -down-> RQUEUE : partilhado
+
+' LLM
+IA --> LLM : POST HTTP\nLLM_PROVIDER2\n(ollama/anthropic/openai)
+
+' Browser
+SSE_NODE --> BROWSER : GET :5001/events\nSSE stream
+DASH --> SSE_NODE : POST :5001/api/agent1/confirm-hypothesis
+
+note right of GR
+  Garantia de entrega:
+  1. _enqueue() persiste antes de gerar
+  2. _dequeue_success() só após emit ok
+  3. Restart restaura .pending_queue.json
+  4. Poll loop reprocessa falhas
+end note
+@enduml

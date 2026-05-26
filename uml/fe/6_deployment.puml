@@ -1,0 +1,123 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 6 — DEPLOYMENT: FRONTEND + EXTENSÃO
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_deployment
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+skinparam nodesep 18
+skinparam ranksep 120
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam NodeBorderColor #94a3b8
+skinparam NodeBackgroundColor #f1f5f9
+skinparam NodeFontColor #0f172a
+skinparam ArtifactBorderColor #64748b
+skinparam ArtifactBackgroundColor #f8fafc
+skinparam ArtifactFontColor #334155
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #e2e8f0
+skinparam ComponentFontColor #0f172a
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Dashboard Frontend — Deployment: Browser + Extensão
+
+node "Servidor SOC" as SERVER {
+  node "SSE Server\n:5001" as SSE_NODE {
+    component [SSE Broker\n/events + /ingest] as SSE
+    artifact "frontend/dist/\nindex.html + assets" as DIST
+    note bottom of SSE_NODE
+      Serve a SPA estática
+      e o stream SSE na
+      mesma porta 5001
+    end note
+  }
+  node "FastAPI Backend\n:8000" as API_NODE {
+    component [CVE / SIEM / Chat\nServices] as API
+  }
+}
+
+node "Browser Chrome" as BROWSER {
+
+  node "Tab: localhost:5001\nDashboard SPA" as TAB {
+
+    node "Vite Bundle\n(compilado de src/)" as BUNDLE {
+      component [main.ts\nOrchestrador] as MAIN
+      component [windows_panel.ts] as WP
+      component [agent2.ts] as A2C
+      component [alert_timeline.ts] as ATC
+      component [slice.ts] as SLC
+      component [graph_viz.ts] as GVC
+      component [store.ts\nsessionStorage] as ST
+
+      artifact "sessionStorage\nagent2_reports\nhypotheses\nslice_state" as SS
+    }
+
+    note bottom of TAB
+      Construído com Vite + TypeScript
+      Build: npm run build
+      Preview: npm run preview :4173
+      HMR em desenvolvimento: :5173
+    end note
+  }
+
+  node "Chrome Extension\nRedShift CVE Agent" as EXT {
+    component [popup.ts\nUI do popup] as POPUP
+    component [content.ts\nContent Script] as CONTENT
+    component [background.ts\nService Worker] as BG
+
+    artifact "chrome.storage.local\npendingWindowContext\npendingCve" as CST
+
+    note bottom of EXT
+      Compilado com webpack
+      Load unpacked: dist/
+      Porta de comunicação:
+      window.postMessage()
+    end note
+note right of CONTENT
+  Listeners:
+  • window.addEventListener('message')
+    → filtra REDSHIFT_WINDOW_CONTEXT
+  • chrome.runtime.onMessage
+    → GET_DETECTED_CVES
+  Try/catch em todas as chamadas
+  chrome.runtime.* para suportar
+  extension context invalidation
+end note
+  }
+
+}
+
+' Server → Browser
+SSE_NODE --> TAB : GET :5001 (SPA)\nGET :5001/events (SSE stream)
+TAB --> SSE_NODE : POST :5001/api/agent1/*\n(process-next, confirm,\n seek, finish)
+TAB --> API_NODE : POST :8000/api/v1/*\n(CVE, SIEM, chat)
+
+' SPA → Extension
+MAIN --> CONTENT : window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*'\n)
+CONTENT --> BG : chrome.runtime.sendMessage(\n  CVE_DETECTED /\n  WINDOW_CONTEXT_READY\n)
+BG --> POPUP : chrome.storage.local\n(pendingWindowContext)
+POPUP --> API_NODE : POST :8000/api/v1/analysis/cve\nPOST :8000/api/v1/analysis/siem\nPOST :8000/api/v1/analysis/chat
+
+' Estado persistido
+ST --> SS : sessionStorage.setItem()
+BG --> CST : chrome.storage.local.set()
+
+
+note right of POPUP
+  Fluxo de análise:
+  1. checkBackendStatus() → /health
+  2. fetchBackendConfig() → /api/config
+  3. consumePendingWindowContext()
+  4. renderWindowContext() → card SOC
+  5. Analista clica "Analisar no SIEM"
+  6. POST /api/v1/analysis/siem
+  7. LLM responde → mostra análise
+end note
+@enduml

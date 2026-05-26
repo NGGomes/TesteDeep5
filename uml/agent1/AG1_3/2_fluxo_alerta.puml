@@ -1,0 +1,99 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 2 — FLUXO DE PROCESSAMENTO (SEQUÊNCIA)
+' ═══════════════════════════════════════════════════════════════════
+
+@startuml agent1_sequence
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f1f5f9
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #f8fafc
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #cbd5e1
+skinparam SequenceGroupBackgroundColor #f8fafc
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Fluxo de Processamento de um Alerta
+
+actor "Dashboard\n(Analista)" as UI
+participant "SSE Server\n:5001" as SSE
+participant "main.py\n:8002" as MAIN
+participant "WindowManager" as WM
+participant "AdaptiveWindow" as AW
+participant "HypothesisGraph" as HG
+participant "Classifier" as CL
+
+UI -> SSE : POST /api/agent1/process-next\n{alert_index: N}
+SSE -> MAIN : POST /agent1/callback\n{alert: {...}}
+MAIN -> MAIN : enqueue(alert)\n_alert_queue.put()
+
+== Processamento do alerta ==
+
+MAIN -> WM : on_alert(alert, timestamp_ms)
+
+group Janela existente?
+  WM -> WM : procura janela activa\nno intervalo temporal
+  alt janela existe
+    WM -> AW : add_alert(alert, ts)
+    AW -> AW : _try_extend(phase, weight)
+    note right: RECON→+5min\nIMPACT→+30min
+  else nova janela
+    WM -> AW : AdaptiveWindow(trigger_alert)
+    AW -> SSE : emit window_created
+  end
+end
+
+== Classificação CISO ==
+
+AW -> CL : classify(phases, category)
+CL -> CL : P(H|fase) × priors
+CL -> AW : top-3 hipóteses + probabilidades
+AW -> AW : _update_ciso_options()
+
+group Convergência?
+  AW -> AW : _check_convergence()
+  alt prob≥97% e alertas≥1\n(high_conf)
+    AW -> AW : is_closed = True\nclose_reason = "convergence"
+    AW -> SSE : emit window_closed
+    AW -> HG : add_evidence()
+  else prob≥85% e alertas≥3\n(normal)
+    AW -> AW : is_closed = True
+    AW -> SSE : emit window_closed
+    AW -> HG : add_evidence()
+  else prob≥75%\n(validação pendente)
+    AW -> SSE : emit window_updated\n(botões confirmação visíveis)
+  else abaixo do limiar
+    AW -> SSE : emit window_updated
+  end
+end
+
+== Grafo de Hipóteses ==
+
+AW -> HG : add_evidence(window_id,\nhypothesis, score, phases)
+HG -> HG : _apply_decay()\nreduz scores antigos
+HG -> HG : actualiza nó + edges
+HG -> SSE : emit graph_state_update
+
+== Feedback ao Frontend ==
+
+MAIN -> SSE : emit agent1_progress\n{index, total, active_windows}
+MAIN -> SSE : emit next_alert_info\n{next_alert, gap_ms}
+SSE -> UI : SSE stream
+
+== Auto-confirmação (após cada alerta) ==
+
+MAIN -> HG : auto_confirm_timeouts()
+alt pending.expires_at_ms expirou\ne não confirmado por operador
+  HG -> HG : node.confirmed = True\nmethod = "timeout"
+  HG -> SSE : emit hypothesis_confirmed\n{method: "timeout"}
+end
+@enduml

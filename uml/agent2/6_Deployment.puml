@@ -1,0 +1,126 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 6 — DEPLOYMENT
+' ═══════════════════════════════════════════════════════════════════
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+skinparam nodesep 20
+skinparam ranksep 70
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam NodeBorderColor #94a3b8
+skinparam NodeBackgroundColor #f1f5f9
+skinparam NodeFontColor #0f172a
+skinparam ArtifactBorderColor #64748b
+skinparam ArtifactBackgroundColor #f8fafc
+skinparam ArtifactFontColor #334155
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #e2e8f0
+skinparam ComponentFontColor #0f172a
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 2 — Diagrama de Deployment
+
+node "Servidor SOC" as HOST {
+
+  node "Agent 2\nProcesso: agent2/graph_reporter.py" as A2 {
+    component [GraphReporter\n(Main Thread)] as GR
+    component [AlertLoader\n(Cache em memória)] as AL
+    component [IncidentAnalyzer] as IA
+    component [DataExtractor] as DE
+    component [CISOReportGenerator] as CG
+    component [SOCReportGenerator] as SG
+    artifact ".pending_queue.json\n(fila persistente)" as QFILE
+    artifact "graph_report_*_ciso.tex" as CTEX
+    artifact "graph_report_*_soc.tex" as STEX
+    note bottom of A2
+      Arrancado pelo launcher.py
+      via importlib.exec_module()
+      Thread daemon — para com o pai
+    end note
+note right of GR
+  Garantia de entrega:
+  1. _enqueue() persiste antes de gerar
+  2. _dequeue_success() só após emit ok
+  3. Restart restaura .pending_queue.json
+  4. Poll loop reprocessa falhas
+end note
+  
+}
+
+  node "SSE Server\nProcesso: sse_server.py :5001" as SSE_NODE {
+    component [SSE Broker] as SSE
+    component [HTTP Handler] as SSEH
+  }
+
+  node "Texer / LaTeX\nProcesso: server_texer.py :5002" as TEX_NODE {
+    component [pdflatex\nReportGenerator] as TEX
+    artifact "graph_report_*_ciso.pdf" as CPDF
+    artifact "graph_report_*_soc.pdf" as SPDF
+    note bottom of TEX_NODE
+      Requer: pdflatex (MiKTeX/TeX Live)
+      Recebe .tex, devolve path .pdf
+    end note
+  }
+
+  node "Agent 1\nProcesso: agent1/main.py" as A1_NODE {
+    component [HypothesisGraph\n(Singleton partilhado)] as HG
+    artifact "hypothesis_graph.json" as HGFILE
+    artifact "dataset.txt\n(alertas de entrada)" as DS
+  }
+
+  node "reports/" as REPORTS {
+    artifact "agent2/\ngraph_report_*.json" as JSON
+    artifact "agent2/\ngraph_report_*_ciso.pdf" as RPDF
+    artifact "agent2/\ngraph_report_*_soc.pdf" as RSPDF
+    artifact "agent1/\n.pending_queue.json" as RQUEUE
+  }
+
+  'FORÇA PILHA VERTICAL INTERNA
+  A2 -[hidden]down-> SSE_NODE
+  SSE_NODE -[hidden]down-> TEX_NODE
+  TEX_NODE -[hidden]down-> A1_NODE
+  A1_NODE -[hidden]down-> REPORTS
+}
+
+node "LLM Runtime\n(local ou remoto)" as LLM_NODE {
+  component [Ollama :11434\n/ Anthropic API\n/ OpenAI API] as LLM
+}
+
+node "Browser" as BROWSER {
+  component [Dashboard SPA] as DASH
+}
+
+' FORÇA ORDEM VERTICAL EXTERNA
+HOST -[hidden]down-> LLM_NODE
+LLM_NODE -[hidden]right-> GR
+
+' Dependências (inalteradas)
+GR ..> HG : <<shared memory>>\nget_global_graph()\npoll 2s
+GR --> SSE_NODE : POST :5001/ingest\nciso_report event
+GR --> TEX_NODE : POST :5002/generate\n{tex content}
+GR ..> DS : \n\n\n\nlê via AlertLoader\nna startup
+
+GR -down-> QFILE : persiste fila
+TEX -down-> CPDF : gera
+TEX -down-> SPDF : gera
+CG --> CTEX : gera .tex
+SG --> STEX : gera .tex
+GR -down-> JSON : _save_report()
+CPDF -down-> RPDF : copia para reports/
+SPDF -down-> RSPDF : copia para reports/
+QFILE -down-> RQUEUE : partilhado
+
+IA --> LLM : POST HTTP LLM_PROVIDER2\n(ollama/anthropic/openai)\n\n
+
+SSE_NODE --> BROWSER : GET :5001/events\nSSE stream
+DASH --> SSE_NODE : POST :5001/api/agent1/confirm-hypothesis
+@enduml

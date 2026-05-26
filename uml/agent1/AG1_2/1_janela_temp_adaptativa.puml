@@ -1,0 +1,102 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 2 — JANELA TEMPORAL ADAPTATIVA
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent1_adaptive_window
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #e2e8f0
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #94a3b8
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Janela Temporal Adaptativa\n(criação, extensão e expiração)
+
+|WindowManager|
+start
+:Alerta recebido\n{timestamp_ms, Category, Type};
+
+:get_phase(Category, Type)\n→ phase, weight;
+
+if (janela activa existe\npara timestamp_ms?) then (sim)
+  :AdaptiveWindow.add_alert(alert, ts);
+  |AdaptiveWindow — _try_extend()|
+  if (window_mode == "adaptive"\nAND NOT is_closed?) then (sim)
+    if (weight ≥ ADAPTIVE_EXTENSION_\nWEIGHT_MIN = 5?) then (sim)
+      :ext_ms = ADAPTIVE_EXTENSION_\nMINUTES × 60 000\n(5 minutos por extensão);
+      :hard_cap = created_at_ms\n+ 60 × 60 000\n(máximo 60 min absoluto);
+      :new_exp = min(\n  expires_at_ms + ext_ms,\n  hard_cap\n);
+      if (new_exp > expires_at_ms?) then (sim)
+        :expires_at_ms = new_exp\nwindow_minutes actualizado;
+        note right
+          Exemplo de extensão progressiva:
+          ─────────────────────────────────
+          Alerta RECON     (w=5)  → +5 min
+          Alerta EXEC      (w=15) → +5 min
+          Alerta LATERAL   (w=20) → +5 min
+          Alerta EXFIL     (w=25) → +5 min
+          Alerta IMPACT    (w=30) → +5 min
+          ─────────────────────────────────
+          Janela cresce com a ameaça
+        end note
+      else (não — já no cap)
+        :expires_at_ms inalterado\n(hard cap atingido);
+      end if
+    else (weight < 5\nex: UNKNOWN)
+      :sem extensão\n(fase de baixo peso);
+    end if
+  else (modo fixed)
+    :sem extensão\n(modo fixo activo);
+  end if
+else (não — nova janela)
+  |AdaptiveWindow — __init__()|
+  :window_id = UUID[:8]\ncreated_at_ms = timestamp_ms;
+  :trigger_phase, _ = get_phase(\n  trigger_alert)\n→ determina duração base;
+  note right
+    Duração base por fase trigger:
+    ──────────────────────────────
+    RECON            →  5 min
+    INITIAL_ACCESS   → 10 min
+    EXECUTION        → 10 min
+    PERSISTENCE      → 10 min
+    LATERAL_MOVEMENT → 15 min
+    EXFILTRATION     → 20 min
+    IMPACT           → 30 min
+    (default)        → CISO_WINDOW_MINUTES
+  end note
+  :expires_at_ms = created_at_ms\n+ window_minutes × 60 000;
+  :decision_deadline_ms = created_at_ms\n+ CISO_DECISION_TIMEOUT_SECONDS × 1000\n(120 segundos para operador);
+  :emit window_created SSE;
+end if
+
+|_update_ciso_options()|
+:Classificação CISO\n(ver diagrama 1);
+
+|check_timeout() — chamado periodicamente|
+fork
+  if (now_ms ≥ expires_at_ms\nAND NOT is_closed?) then (sim)
+    :is_closed = True\nclose_reason = "timeout"\nemit window_closed;
+    :HypothesisGraph\nauto_confirm_timeouts();
+  else (não)
+  end if
+fork again
+  if (now_ms ≥ decision_deadline_ms\nAND validation_requested\nAND NOT validation_completed?) then (sim)
+    :timeout de validação\nauto-confirmação da top hipótese;
+  else (não)
+  end if
+end fork
+
+stop
+@enduml

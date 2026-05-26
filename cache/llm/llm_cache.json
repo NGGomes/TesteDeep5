@@ -1,0 +1,22 @@
+{
+  "30fd8201341618b4547b547240662b53": {
+    "response": "```json\n{\n  \"why_it_matters\": \"The analyst's high-confidence classification indicates a significant security event requiring immediate executive attention and potential stakeholder notification.\",\n  \"what_was_detected\": \"A security incident has been flagged as a major breach with potential impact, though specific technical details and affected assets remain under investigation.\",\n  \"immediate_actions\": [\n    \"Activate incident response team and establish command center \u2014 IR Team\",\n    \"Preserve all logs and forensic evidence from potentially affected systems \u2014 Security Operations\",\n    \"Notify legal and compliance teams to assess regulatory reporting obligations \u2014 Legal & Compliance\"\n  ],\n  \"key_message\": \"We have detected a significant security event classified as a major breach; our incident response team is mobilized and we will provide a detailed impact assessment within 24 hours.\"\n}\n```",
+    "cached_at": 1779372242.537148,
+    "prompt_hash": "30fd8201341618b4547b547240662b53"
+  },
+  "11eb6b7fd36666c1136e42a24eaeefe9": {
+    "response": "```json\n{\"threat_classification\":\"Major Breach with Impact - Insufficient Data for Classification\",\"containment_steps\":[\"Activate incident response team and establish war room\",\"Preserve all logs and forensic evidence from potentially affected systems\",\"Initiate credential audit and reset for privileged accounts\",\"Segment network by department to prevent lateral movement\",\"Enable enhanced monitoring on all egress points\",\"Activate backup and disaster recovery procedures\"],\"investigation_queries\":[\"Search SIEM for any anomalous authentication patterns, failed logins, or privilege escalations in past 7 days\",\"Query EDR for suspicious process execution, unsigned binaries, or living-off-the-land activity across all endpoints\",\"Correlate firewall and proxy logs for unusual outbound connections, DNS queries to suspicious domains, or data exfiltration patterns\"]}\n```",
+    "cached_at": 1779372245.5292425,
+    "prompt_hash": "11eb6b7fd36666c1136e42a24eaeefe9"
+  },
+  "4bd2170326a3fbfdea79ad609b5d3d11": {
+    "response": "```json\n{\n  \"why_it_matters\": \"Lateral movement with malware indicates an attacker may be expanding access within your network, potentially threatening critical systems and sensitive data.\",\n  \"what_was_detected\": \"Security analysis identified suspicious lateral movement patterns consistent with malware propagation across your environment.\",\n  \"immediate_actions\": [\n    \"Isolate and examine affected systems for malware presence \u2014 Incident Response Team\",\n    \"Map network connections and identify all systems contacted by suspicious activity \u2014 Security Operations Center\",\n    \"Preserve logs and forensic evidence from affected hosts \u2014 Forensics Team\"\n  ],\n  \"key_message\": \"We have detected activity consistent with lateral movement; immediate investigation is underway to contain any potential spread and protect your critical assets.\"\n}\n```",
+    "cached_at": 1779372481.2950587,
+    "prompt_hash": "4bd2170326a3fbfdea79ad609b5d3d11"
+  },
+  "6438b7d28f58a907131a755dbf481c59": {
+    "response": "```json\n{\n  \"threat_classification\": \"Lateral Movement with Malware - Insufficient Data for Classification\",\n  \"containment_steps\": [\n    \"Isolate suspected hosts from network segment pending further investigation\",\n    \"Capture memory dumps and full disk images from affected systems\",\n    \"Review and revoke suspicious service account credentials across domain\"\n  ],\n  \"investigation_queries\": [\n    \"Search EDR/SIEM for process execution chains, lateral movement tools (psexec, wmic, winrm), and privilege escalation attempts across all endpoints\",\n    \"Query authentication logs for failed/successful logins, service account abuse, and unusual access patterns to critical assets in past 7 days\",\n    \"Correlate network traffic logs for internal C2 communication patterns, SMB/RDP abuse, and data exfiltration to non-standard ports\"\n  ]\n}\n```",
+    "cached_at": 1779372484.2084408,
+    "prompt_hash": "6438b7d28f58a907131a755dbf481c59"
+  }
+}

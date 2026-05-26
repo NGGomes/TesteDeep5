@@ -1,0 +1,167 @@
+[
+  {
+    "timestamp": "2026-05-21T12:37:54.616774+00:00",
+    "type": "ciso",
+    "scores": {
+      "ownership_rate": 0.33,
+      "completeness": 1.0,
+      "total": 80
+    },
+    "issues": [
+      {
+        "field": "what_was_detected",
+        "issue": "unconfirmed_breach_language",
+        "snippet": "A security incident has been flagged by our analyst team as a major breach with potential impact, th"
+      },
+      {
+        "field": "immediate_actions",
+        "issue": "low_ownership_rate (33%)"
+      }
+    ],
+    "latency_ms": 3472.606420516968,
+    "acceptable": false
+  },
+  {
+    "timestamp": "2026-05-21T12:37:54.617928+00:00",
+    "type": "soc",
+    "scores": {
+      "completeness": 1.0,
+      "total": 100
+    },
+    "issues": [],
+    "latency_ms": 2793.063163757324,
+    "acceptable": true
+  },
+  {
+    "timestamp": "2026-05-21T12:45:29.411612+00:00",
+    "type": "ciso",
+    "scores": {
+      "ownership_rate": 0.33,
+      "completeness": 1.0,
+      "total": 80
+    },
+    "issues": [
+      {
+        "field": "what_was_detected",
+        "issue": "unconfirmed_breach_language",
+        "snippet": "A security incident has been flagged by our analyst team as a major breach with potential impact, th"
+      },
+      {
+        "field": "immediate_actions",
+        "issue": "low_ownership_rate (33%)"
+      }
+    ],
+    "latency_ms": 0.16045570373535156,
+    "acceptable": false
+  },
+  {
+    "timestamp": "2026-05-21T12:45:29.414712+00:00",
+    "type": "soc",
+    "scores": {
+      "completeness": 1.0,
+      "total": 100
+    },
+    "issues": [],
+    "latency_ms": 0.10752677917480469,
+    "acceptable": true
+  },
+  {
+    "timestamp": "2026-05-21T12:51:56.123995+00:00",
+    "type": "ciso",
+    "scores": {
+      "ownership_rate": 0.33,
+      "completeness": 1.0,
+      "total": 80
+    },
+    "issues": [
+      {
+        "field": "what_was_detected",
+        "issue": "unconfirmed_breach_language",
+        "snippet": "A security incident has been flagged by our analyst team as a major breach with potential impact, th"
+      },
+      {
+        "field": "immediate_actions",
+        "issue": "low_ownership_rate (33%)"
+      }
+    ],
+    "latency_ms": 0.11038780212402344,
+    "acceptable": false
+  },
+  {
+    "timestamp": "2026-05-21T12:51:56.126909+00:00",
+    "type": "soc",
+    "scores": {
+      "completeness": 1.0,
+      "total": 100
+    },
+    "issues": [],
+    "latency_ms": 0.06771087646484375,
+    "acceptable": true
+  },
+  {
+    "timestamp": "2026-05-21T14:04:05.532938+00:00",
+    "type": "ciso",
+    "scores": {
+      "ownership_rate": 0.67,
+      "completeness": 1.0,
+      "total": 70
+    },
+    "issues": [
+      {
+        "field": "what_was_detected",
+        "issue": "unconfirmed_breach_language",
+        "snippet": "A security incident has been flagged as a major breach with potential impact, though specific techni"
+      },
+      {
+        "field": "key_message",
+        "issue": "unconfirmed_breach_language",
+        "snippet": "We have detected a significant security event classified as a major breach; our incident response te"
+      },
+      {
+        "field": "immediate_actions",
+        "issue": "low_ownership_rate (67%)"
+      }
+    ],
+    "latency_ms": 3092.18692779541,
+    "acceptable": false
+  },
+  {
+    "timestamp": "2026-05-21T14:04:05.535686+00:00",
+    "type": "soc",
+    "scores": {
+      "completeness": 1.0,
+      "total": 100
+    },
+    "issues": [],
+    "latency_ms": 2993.1817054748535,
+    "acceptable": true
+  },
+  {
+    "timestamp": "2026-05-21T14:08:04.209924+00:00",
+    "type": "ciso",
+    "scores": {
+      "ownership_rate": 0.33,
+      "completeness": 1.0,
+      "total": 90
+    },
+    "issues": [
+      {
+        "field": "immediate_actions",
+        "issue": "low_ownership_rate (33%)"
+      }
+    ],
+    "latency_ms": 2562.3865127563477,
+    "acceptable": false
+  },
+  {
+    "timestamp": "2026-05-21T14:08:04.211311+00:00",
+    "type": "soc",
+    "scores": {
+      "completeness": 1.0,
+      "total": 100
+    },
+    "issues": [],
+    "latency_ms": 2913.6035442352295,
+    "acceptable": true
+  }
+]

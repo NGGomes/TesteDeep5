@@ -1,0 +1,61 @@
+/* graph_viz.css — hypothesis graph overlay + graph body
+ Localização: src/components/graph_viz.css
+ Import a adicionar em src/components/graph_viz.ts:
+  import './graph_viz.css';
+*/
+.graph-overlay {
+ position: fixed; inset: 0; z-index: 200;
+ display: flex; align-items: flex-start; justify-content: center;
+ padding-top: 48px;
+}
+
+.graph-overlay-backdrop {
+ position: absolute; inset: 0;
+ background: rgba(0,0,0,.65);
+ backdrop-filter: blur(4px);
+}
+
+.graph-overlay-panel {
+ position: relative; z-index: 1;
+ width: min(96vw, 1200px);
+ max-height: calc(100vh - 80px);
+ display: flex; flex-direction: column;
+ background: var(--bg2);
+ border: 1px solid var(--border3);
+ border-radius: 12px;
+ box-shadow: 0 24px 80px rgba(0,0,0,.6);
+ overflow: hidden;
+}
+
+.graph-overlay-header {
+ display: flex; align-items: center; gap: 10px;
+ padding: 12px 18px;
+ background: var(--bg1);
+ border-bottom: 1px solid var(--border2);
+ flex-shrink: 0;
+}
+
+.graph-overlay-body {
+ overflow-y: auto; overflow-x: hidden;
+ flex: 1; padding: 16px;
+}
+.graph-overlay-body::-webkit-scrollbar { width: 5px; }
+.graph-overlay-body::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+.graph-close-btn {
+ margin-left: auto;
+ background: var(--bg3); border: 1px solid var(--border2);
+ border-radius: 6px; color: var(--text3);
+ font-size: 14px; width: 28px; height: 28px;
+ display: flex; align-items: center; justify-content: center;
+ cursor: pointer; transition: background .12s;
+}
+.graph-close-btn:hover { background: var(--bg4); color: var(--text); }
+
+@media (max-width: 768px) {
+ .graph-overlay { padding-top: 0; }
+ .graph-overlay-panel {
+  width: 100vw; max-height: 100vh;
+  border-radius: 0; border: none;
+ }
+}

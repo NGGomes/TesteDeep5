@@ -1,0 +1,139 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 6 — DEPLOYMENT (caminhos otimizados)
+' ═══════════════════════════════════════════════════════════════════
+
+!theme plain
+
+skinparam linetype ortho
+skinparam nodesep 20
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam NodeBorderColor #94a3b8
+skinparam NodeBackgroundColor #f1f5f9
+skinparam NodeFontColor #0f172a
+skinparam ArtifactBorderColor #64748b
+skinparam ArtifactBackgroundColor #f8fafc
+skinparam ArtifactFontColor #334155
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #e2e8f0
+skinparam ComponentFontColor #0f172a
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Diagrama de Deployment 
+' Layout para minimizar cruzamentos
+left to right direction
+
+' Camada externa (mais à direita)
+node "NVD / NIST\n(externo)" as NVD {
+  component [CVE API] as CVEAPI
+}
+
+node "Ollama / LLM\n(local ou remoto)" as OLLAMA {
+  component [LLM Runtime\nllama3.2 / claude] as LLM_RT
+}
+
+' Camada principal
+node "Servidor SOC\n(Windows/Linux)" as HOST {
+
+  node "Python Runtime" as PY {
+    
+    ' Linha superior: Frontend e API
+    node "FastAPI Backend\n:8000" as API_NODE {
+      component [CVE Service] as CVE
+      component [SIEM Service] as SIEM
+      component [LLM Service] as LLM
+      note bottom of API_NODE
+        Porta: 8000
+        Protocol: HTTP/REST
+      end note
+    }
+
+    node "Browser\n(Chrome)" as BROWSER {
+      component [Dashboard SPA] as DASH
+      component [RedShift Ext] as EXT
+    }
+
+    ' Linha média: SSE e Agent 1 (comunicação direta)
+    node "SSE Server\n:5001" as SSE_NODE {
+      component [SSE Broker] as SSE
+      component [HTTP Handler] as HTTP
+      artifact "dataset_bounds.json" as BOUNDS
+      note bottom of SSE_NODE
+        Porta: 5001
+        Protocol: HTTP/1.1 + SSE
+      end note
+    }
+
+    node "Agent 1\n:8002" as A1_NODE {
+      component [Orchestrador] as ORCH
+      component [WindowManager] as WM
+      component [HypothesisGraph] as HG
+      component [ProbabilisticClassifier] as PC
+      artifact "hypothesis_graph.json" as HG_FILE
+      artifact "classifier_state.json" as CL_FILE
+      note bottom of A1_NODE
+        Porta: 8002 (callback)
+        Protocol: HTTP
+      end note
+    }
+
+    ' Linha inferior: Agent 2 e Texer
+    node "Agent 2" as A2_NODE {
+      component [GraphReporter] as GR
+      artifact ".pending_queue.json" as QUEUE
+      artifact "graph_report_*.pdf" as PDF
+    }
+
+    node "Texer / LaTeX\n:5002" as TEX_NODE {
+      component [ReportGenerator] as TEX
+      note bottom of TEX_NODE
+        Porta: 5002
+        Requires: pdflatex
+      end note
+    }
+
+  }
+}
+
+' Ligações curtas e diretas
+' Browser <-> SSE (comunicação bidirecional)
+BROWSER -down-> SSE_NODE : GET /events (SSE)\nPOST /api/*
+
+' Browser <-> API
+BROWSER -down-> API_NODE : GET/POST /api/*
+
+' Extensão <-> API
+EXT -down-> API_NODE : POST /api/v1/analysis/*
+
+' SSE <-> Agent 1 (callback bidirecional)
+SSE_NODE -right-> A1_NODE : POST :8002/agent1/callback
+A1_NODE -left-> SSE_NODE : POST :5001/ingest
+
+' Agent 1 -> Agent 2 (shared memory)
+A1_NODE -down-> A2_NODE : <<shared memory>>\nget_global_graph()
+
+' Agent 2 -> Texer
+A2_NODE -down-> TEX_NODE : POST :5002/generate
+
+' Agent 2 -> SSE (relatório gerado)
+A2_NODE -up-> SSE_NODE : POST :5001/ingest\n(ciso_report)
+
+' API -> Externos
+API_NODE -up-> OLLAMA : POST :11434/api/chat
+API_NODE -down-> NVD : \nGET services.nvd.nist.gov
+
+
+' Artefactos persistidos (diretamente abaixo)
+HG -down-> HG_FILE : persiste
+PC -down-> CL_FILE : persiste
+GR -down-> QUEUE : fila garantida
+GR -down-> PDF : gera
+@enduml

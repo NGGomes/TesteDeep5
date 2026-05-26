@@ -1,0 +1,142 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 2 — COMPONENTES + INTERFACES
+' ═══════════════════════════════════════════════════════════════════
+
+!theme plain
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam ComponentFontColor #0f172a
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam PackageFontColor #0f172a
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 1 — Diagrama de Componentes e Interfaces
+
+skinparam linetype ortho
+left to right direction
+' Anula left to right para estes dois packages
+together {
+package "Host: Servidor SOC" {
+
+  package "SSE Server (:5001)" {
+    [SSE Broker\n/ingest + /events] as SSE
+    [HTTP Handler\ndo_GET / do_POST] as SSEH
+    interface "GET /events" as ISSE_OUT
+    interface "POST /ingest" as ISSE_IN
+    interface "POST /api/agent1/process-next" as IPROC
+    interface "POST /api/agent1/confirm-hypothesis" as ICONF
+    interface "POST /api/agent1/seek" as ISEEK
+    interface "POST /api/agent1/finish" as IFINISH
+    SSE - ISSE_OUT
+    SSE - ISSE_IN
+    SSEH - IPROC
+    SSEH - ICONF
+    SSEH - ISEEK
+    SSEH - IFINISH
+  }
+
+  package "Agent 1 (:8002)" {
+    [main.py\nOrchestrador] as MAIN
+    [process_alert_loop\nThread dedicada] as PAL
+    [WindowManager] as WM
+    [AdaptiveWindow\n(instâncias por janela)] as AW
+    [HypothesisGraph\nSingleton] as HG
+    [ProbabilisticClassifier\nSingleton] as PC
+
+    interface "POST /agent1/callback" as ICALLBACK
+    interface "IWindowEvidence" as IWE
+    interface "IClassification" as ICL
+    interface "IGraphState" as IGS
+
+    MAIN - ICALLBACK
+    WM - IWE
+    PC - ICL
+    HG - IGS
+
+' Força altura com conexões invisíveis
+    MAIN -[hidden]down- PAL
+    PAL -[hidden]down- WM
+    WM -[hidden]down- AW
+    AW -[hidden]down- HG
+    HG -[hidden]down- PC
+
+  }
+
+  package "Agent 2 — Graph Reporter" {
+    [GraphReporter\nThread de polling] as GR
+    [PendingQueue\n.pending_queue.json] as PQ
+    interface "get_confirmed_hypotheses()" as IGC
+    GR - PQ
+  }
+
+  package "Texer / LaTeX (:5002)" {
+    [ReportGenerator\nPDF + .tex] as TEX
+    interface "POST /generate" as ITEX
+    TEX - ITEX
+  }
+
+  note right of PC
+    Naive Bayes online
+    Persistido em JSON
+    Aprende por operador
+  end note
+
+  note right of HG
+    Grafo dirigido de hipóteses
+    Decay temporal de scores
+    Persistido entre sessões
+  end note
+}
+
+package "Cliente Web" {
+  [Dashboard SPA\n(Vite + TypeScript)] as DASH
+  [Slice.ts\nControlo de ritmo] as SLICE
+  DASH *-- SLICE
+}
+}
+
+DASH --> IPROC : <<HTTP POST>>\nrequest next alert
+IPROC --> MAIN : dispatch
+MAIN --> PAL : enqueue(alert)
+PAL --> WM : on_alert()
+WM --> AW : <<creates / routes>>
+AW --> ICL : classify(phases)
+ICL --> AW : CISOOption[3]
+AW --> IWE : <<emits evidence>>
+IWE --> HG : add_evidence()
+HG --> IGS : state update
+
+' SSE Events
+AW --> ISSE_IN : window_created\nwindow_updated\nwindow_closed\nalert
+HG --> ISSE_IN : hypothesis_confirmed\ngraph_state_update
+MAIN --> ISSE_IN : agent1_progress\nnext_alert_info
+ISSE_OUT --> DASH : <<SSE stream>>
+
+' Confirmação operador
+DASH --> ICONF : <<HTTP POST>>\n{window_id, hypothesis_label}
+ICONF --> HG : confirm_by_operator()
+ICONF --> GR : trigger_report_now()
+
+' Finish
+DASH --> IFINISH : <<HTTP POST>>
+IFINISH --> WM : close_window()
+IFINISH --> HG : confirm_by_operator()
+
+' Agent 2
+GR --> IGC : <<poll 2s>>
+IGC --> GR : confirmed hypotheses
+GR --> ITEX : generate PDF
+GR --> ISSE_IN : ciso_report
+@enduml

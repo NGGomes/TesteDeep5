@@ -1,0 +1,86 @@
+# ─── Python ───────────────────────────────────────────────────────────────────
+env/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
+.Python
+
+# ─── Testes e cobertura ───────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+# ─── Segredos e configuração local ────────────────────────────────────────────
+".env"
+.env
+*.env.local
+*.env.*.local
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+!logs/.gitkeep
+
+# ─── Reports (outputs gerados em runtime) ─────────────────────────────────────
+reports/agent1/*
+reports/agent2/*
+!reports/agent1/.gitkeep
+!reports/agent2/.gitkeep
+
+# ─── Cache CVE (soc-dashboard/backend, gerado por cve_service.py) ─────────────
+data/cve_cache/
+!data/.gitkeep
+
+# ─── Cache e métricas LLM (gerados por llm_quality.py) ───────────────────────
+cache/
+!cache/.gitkeep
+
+# ─── Ficheiros de estado em runtime (gerados pelos agentes) ──────────────────
+# Agent 2 — fila persistente de relatórios
+reports/agent2/.pending_queue.json
+
+# Agent 1 — estado do classificador e bounds do dataset
+reports/agent1/classifier_state.json
+reports/agent1/dataset_bounds.json
+reports/agent1/hypothesis_graph.json
+reports/agent1/classification_log_*.json
+
+# ─── Node.js / Frontend ───────────────────────────────────────────────────────
+node_modules/
+soc-dashboard/frontend/node_modules/
+soc-dashboard/frontend/dist/
+soc-dashboard/frontend/.vite/
+
+# ─── Chrome Extension build ───────────────────────────────────────────────────
+redshift-chrome-extension/node_modules/
+redshift-chrome-extension/dist/
+
+# ─── TypeScript ───────────────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ─── IDE e editores ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Jupyter (se usado em análise) ───────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Dados sensíveis / temporários ───────────────────────────────────────────
+data/raw/
+*.tmp
+*.bak

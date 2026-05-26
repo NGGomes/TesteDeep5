@@ -1,0 +1,95 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 4 — MÁQUINA DE ESTADOS
+' ═══════════════════════════════════════════════════════════════════
+
+
+!theme plain
+
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam ranksep 70
+
+skinparam roundcorner 10
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam StateBorderColor #94a3b8
+skinparam StateBackgroundColor #f8fafc
+skinparam StateFontColor #0f172a
+skinparam StateAttributeFontColor #475569
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #1e293b
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Máquina de Estados: AdaptiveWindow
+
+[*] --> Criada : trigger_alert recebido\n/emit window_created
+
+state Criada {
+  Criada : entry / _add_alert(trigger)\n_emit_created()
+  Criada : do    / _update_ciso_options()
+}
+
+Criada --> Activa : add_alert() aceite\n/emit window_updated
+
+state Activa {
+  Activa : entry / _add_alert(alert)
+  Activa : do    / _update_ciso_options()\n_try_extend(phase, weight)
+  Activa : exit  / _update_ciso_options()
+}
+
+Activa --> Activa : [alerta correlacionado\nAND NOT is_closed]\n/_try_extend()
+
+Activa --> ValidacaoPendente : [prob ≥ 0.75]\n/request_operator_validation()
+
+state ValidacaoPendente {
+  ValidacaoPendente : entry / emit window_updated\niniciar timer 120s
+  ValidacaoPendente : do    / aguardar confirmação
+}
+
+ValidacaoPendente --> ValidacaoPendente : [alerta recebido]\n/_update_ciso_options()\n\n\n
+
+ValidacaoPendente --> FechadaOperador : confirmação manual\n[hypothesis_label recebido]\n/confirm_by_operator()
+
+ValidacaoPendente --> FechadaTimeout : [expires_at_ms < now]\n/auto_confirm_timeouts()
+
+ValidacaoPendente --> FechadaConvergencia : [prob ≥ 0.97 AND n ≥ 1]\nOU [prob ≥ 0.85 AND n ≥ 3]\n/_check_convergence()
+
+Activa --> FechadaConvergencia : [prob ≥ 0.97 AND n ≥ 1]\nOU [prob ≥ 0.85 AND n ≥ 3]\n/_check_convergence()
+
+Activa --> FechadaTimeout : [expires_at_ms < now]\n/auto_confirm_timeouts()
+
+state FechadaOperador {
+  FechadaOperador : entry / is_closed = True\nclose_reason = "operator"\nclassifier.record_confirmation()\nemit hypothesis_confirmed
+}
+
+state FechadaTimeout {
+  FechadaTimeout : entry / is_closed = True\nclose_reason = "timeout"\nemit hypothesis_confirmed\n{method: "timeout"}
+}
+
+state FechadaConvergencia {
+  FechadaConvergencia : entry / is_closed = True\nclose_reason = "convergence"\nemit window_closed\nHG.add_evidence()
+}
+
+FechadaOperador --> [*] : / Agent2.trigger_report_now()
+FechadaTimeout --> [*] : / Agent2._process_queue()
+FechadaConvergencia --> [*] : / Agent2._process_queue()
+
+note right of FechadaOperador
+  Feedback loop:
+  ProbabilisticClassifier
+  actualiza contagens para
+  esta sequência de fases
+end note
+
+note left of FechadaConvergencia
+  Dois limiares (OR):
+  • prob ≥ 97% e alertas ≥ 1
+    (convergência rápida)
+  • prob ≥ 85% e alertas ≥ 3
+    (convergência normal)
+end note
+@enduml

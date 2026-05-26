@@ -1,0 +1,267 @@
+/* slice.css — alert stream bar + countdown timer
+ Localização: src/components/slice.css
+ Import a adicionar em src/components/slice.ts:
+  import './slice.css';
+ Nota: a slice-row (slicer visual) foi removida — o ritmo é controlado
+ exclusivamente pelos eventos SSE next_alert_info do servidor.
+*/
+/* Alert stream bar */
+.alert-stream-bar {
+ display: flex; align-items: center; gap: 0;
+ padding: 5px 8px; font-size: 10px; font-family: var(--mono);
+ background: rgba(0,0,0,.2); flex-wrap: nowrap; overflow: hidden;
+}
+
+.slice-row button {
+ padding: 2px 6px !important;  
+ min-height: 18px;             
+ font-size: 11px;              
+}
+
+.stream-now, .stream-next { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.stream-sep { width: 1px; height: 18px; background: var(--border2); margin: 0 12px; flex-shrink: 0; }
+
+.stream-tag {
+ font-size: 8px; font-weight: 800; letter-spacing: .08em;
+ padding: 2px 6px; border-radius: 3px; flex-shrink: 0;
+}
+.now-tag  { background: rgba(34,197,94,.15);  color: #6ee7b7; border: 1px solid rgba(34,197,94,.3); }
+.next-tag { background: rgba(251,191,36,.12); color: #fcd34d; border: 1px solid rgba(251,191,36,.3); }
+
+.alert-progress  { color: #22c55e; font-weight: 700; }
+.alert-details   { color: var(--text2); font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alert-timestamp { color: var(--text4); }
+.next-number     { color: #fbbf24; font-weight: 700; }
+.next-cat, .next-type { color: var(--cyan-hi); }
+.next-time       { color: var(--text4); }
+
+.next-timer {
+ font-weight: 800; color: #fbbf24;
+ background: rgba(15,23,42,.7); border: 1px solid rgba(251,191,36,.3);
+ padding: 2px 8px; border-radius: 4px;
+ min-width: 40px; text-align: center; letter-spacing: .04em;
+}
+.next-timer.timer-critical {
+ color: #ef4444; border-color: rgba(239,68,68,.4);
+ animation: pulse-red .5s ease-in-out infinite;
+}
+@keyframes pulse-red { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+
+.stream-status { margin-left: auto; font-size: 9px; color: var(--text4); flex-shrink: 0; }
+
+/* ── Stream details dropbox ─────────────────────────────────────────────── */
+
+.stream-details {
+ background: rgba(0,0,0,.2);
+ border-bottom: 1px solid rgba(148,163,184,.12);
+ flex-shrink: 0;
+}
+
+.stream-details[open] .stream-summary { border-bottom: 1px solid rgba(148,163,184,.1); }
+
+.stream-summary {
+ display: flex; align-items: center; gap: 10px;
+ padding: 4px 16px;
+ cursor: pointer;
+ list-style: none;
+ font-family: var(--mono); font-size: 10px;
+ user-select: none;
+ /* hide the default browser triangle */
+}
+.stream-summary::-webkit-details-marker { display: none; }
+.stream-summary::before {
+ content: '▶';
+ font-size: 8px; color: var(--text4);
+ transition: transform .2s;
+ flex-shrink: 0;
+}
+.stream-details[open] .stream-summary::before { transform: rotate(90deg); }
+.stream-summary:hover::before { color: var(--text2); }
+
+.stream-summary-left {
+ display: flex; align-items: center; gap: 6px; flex: 1;
+}
+.stream-summary-right {
+ display: flex; align-items: center; gap: 6px;
+}
+
+/* Expanded body — reuse existing .alert-stream-bar rules */
+.alert-stream-bar {
+ padding: 5px 16px 6px 32px; /* indent under the ▶ toggle */
+}
+
+@media (max-width: 480px) {
+ .stream-summary-right { display: none; }
+}
+
+/* ── Stream details — single-line summary, no body ─────────────────────── */
+
+/* Override previous rules */
+.stream-summary {
+ flex-wrap: nowrap;
+ overflow: hidden;
+ gap: 6px;
+ padding: 4px 16px 4px 12px;
+}
+
+/* All IDs in the summary — compact, no wrapping */
+#current-alert-details   { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#current-alert-timestamp { color: var(--text4); flex-shrink: 0; }
+#next-alert-number       { color: #fbbf24; font-weight: 700; flex-shrink: 0; }
+#next-alert-category, #next-alert-type { color: var(--cyan-hi); }
+#next-alert-time         { color: var(--text4); flex-shrink: 0; }
+
+.stream-vsep {
+ color: var(--border2);
+ margin: 0 4px;
+ flex-shrink: 0;
+}
+
+.stream-status-inline {
+ margin-left: auto;
+ font-size: 9px; color: var(--text4);
+ flex-shrink: 0;
+ white-space: nowrap;
+}
+
+/* Hide the now-redundant expanded body */
+.stream-details[open] > :not(summary) { display: none; }
+
+/* On very small screens, hide secondary info */
+@media (max-width: 640px) {
+ #next-alert-category, #next-alert-type, #next-alert-time,
+ .stream-vsep, .stream-status-inline { display: none; }
+}
+
+/* ── New slicer layout (image-match) ────────────────────────────────────── */
+
+/* Remove old stream-details/summary rules */
+.stream-details, .stream-summary { display: none !important; }
+
+/* LINHA 1 — toggle | bounds-start | nav | track | bounds-end */
+.slice-row {
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ padding: 5px 8px;
+ background: #0a1628;
+ border-bottom: 1px solid rgba(34,211,238,.18);
+ flex-shrink: 0;
+ min-height: 36px;
+}
+
+.slice-toggle-btn {
+ width: 18px; height: 16px;
+ background: rgba(34,211,238,.12);
+ border: 1px solid rgba(34,211,238,.35);
+ border-radius: 2px;
+ color: var(--cyan-hi, #22d3ee);
+ font-size: 6px; font-weight: 700;
+ cursor: pointer; flex-shrink: 0;
+ display: flex; align-items: center; justify-content: center;
+ transition: background .12s, color .12s;
+}
+.slice-toggle-btn:hover { background: rgba(34,211,238,.25); }
+.slice-toggle-btn.collapsed { color: #94a3b8; border-color: rgba(148,163,184,.3); }
+
+/* Slice toggle styles */
+.slice-toggle-row {
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ padding: 2px 16px;
+ min-height: 0;
+ line-height: 1;
+}
+
+.slice-toggle-label {
+ font-family: var(--mono);
+ font-size: 8px;
+ color: var(--text4);
+ letter-spacing: 0.3px;
+ line-height: 1;
+}
+
+.slice-collapsible-content {
+ transition: all 0.2s ease;
+}
+
+.slice-collapsible-content.collapsed {
+ display: none;
+}
+
+.dataset-bounds-ts {
+ font-family: var(--mono);
+ font-size: 10px; font-weight: 600;
+ color: #22c55e;
+ white-space: nowrap;
+ flex-shrink: 0;
+}
+
+/* Track */
+.slice-track-wrap {
+ flex: 1;
+ position: relative;
+ height: 28px;
+ display: flex;
+ align-items: center;
+ min-width: 120px;
+}
+
+/* LINHA 2 — stream info row */
+.slice-stream-row {
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ padding: 3px 12px 3px 36px; /* indent to align under track */
+ background: #080f1e;
+ border-bottom: 1px solid rgba(148,163,184,.08);
+ font-family: var(--mono);
+ font-size: 10px;
+ flex-shrink: 0;
+ overflow: hidden;
+ transition: max-height .2s ease, opacity .2s ease, padding .2s ease;
+ max-height: 30px;
+ opacity: 1;
+}
+
+.slice-stream-row.hidden {
+ max-height: 0;
+ opacity: 0;
+ padding-top: 0;
+ padding-bottom: 0;
+ pointer-events: none;
+}
+
+.stream-vsep {
+ width: 1px; height: 14px;
+ background: rgba(148,163,184,.25);
+ flex-shrink: 0;
+ margin: 0 4px;
+}
+
+.stream-right-chips {
+ margin-left: auto;
+ display: flex; align-items: center; gap: 8px;
+ flex-shrink: 0;
+}
+
+.stream-status-chip {
+ font-size: 9px; color: var(--text4);
+}
+
+.slice-track-wrap {
+ position: relative;
+ margin: 0 12px;  /* espaço antes e depois da barra */
+}
+
+.slice-row button {
+ padding: 2px 6px !important;
+ min-height: auto;
+ font-size: 8px;
+}
+
+.hidden {
+  display: none !important;
+}

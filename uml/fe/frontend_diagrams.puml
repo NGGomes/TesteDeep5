@@ -1,0 +1,655 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 1 — MÓDULOS E DEPENDÊNCIAS (COMPONENTES)
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_components
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam ComponentFontColor #0f172a
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam PackageFontColor #0f172a
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Dashboard Frontend — Módulos e Dependências (UML 2.x)
+
+package "src/boot" {
+  component [template.ts\nAPP_TEMPLATE HTML] as TMPL
+}
+
+package "src/core" {
+  component [store.ts\nEstado global reactivo] as STORE
+  component [types.ts\nInterfaces TypeScript] as TYPES
+  component [logger.ts\nLogger estruturado] as LOG
+  component [constants.ts\nSTORAGE_KEYS] as CONST
+}
+
+package "src/data" {
+  component [handlers.ts\ncomputeKPIs()] as HAND
+}
+
+package "src/components" {
+  component [main.ts\nOrchestrador SSE + Render] as MAIN
+  component [windows_panel.ts\nrenderWindowsPanel()] as WP
+  component [agent2.ts\nrenderAgent2Panel()] as A2
+  component [alert_timeline.ts\nrenderAlertTimelineSVG()] as AT
+  component [slice.ts\nControlo de ritmo\n+ Slicer temporal] as SL
+  component [graph_viz.ts\nrenderHypothesisGraph()] as GV
+  component [sidebar.ts\nrenderSidebarKPIs()] as SB
+  component [kpi.ts\nrenderKPIStrip()] as KPI
+  component [modals.ts\nrenderDetailModal()] as MOD
+  component [footer.ts\nrenderConnectionBadge()] as FOOT
+}
+
+package "src/extension" {
+  component [content.ts\n__wmPushAlertToExtension\nwindow.postMessage()] as CONT
+}
+
+package "Servidor SSE :5001" {
+  component [SSE Broker\n/events] as SSE
+  interface "GET /events" as ISSE
+  interface "POST /api/agent1/*" as IAPI
+  SSE - ISSE
+  SSE - IAPI
+}
+
+' Dependências
+MAIN --> TMPL : <<imports>>
+MAIN --> STORE : <<imports>>\ngetAlerts, setConnection\ngetAgent2Reports...
+MAIN --> TYPES : <<imports>>\nWindowState, AlertPayload...
+MAIN --> LOG : <<imports>>
+MAIN --> HAND : computeKPIs()
+MAIN --> WP : renderWindowsPanel()
+MAIN --> A2 : renderAgent2Panel()
+MAIN --> AT : renderAlertTimelineSVG()
+MAIN --> SL : wireSliceControls()\nstartCountdown()
+MAIN --> GV : renderHypothesisGraph()
+MAIN --> SB : renderSidebarKPIs()
+MAIN --> KPI : renderKPIStrip()
+MAIN --> MOD : renderDetailModal()
+MAIN --> FOOT : renderConnectionBadge()
+
+WP --> TYPES : <<imports>>
+WP --> AT : renderAlertTimelineSVG()\n(mini-timeline nos cards)
+WP --> CONT : window.postMessage()\n__wmPushAlertToExtension()
+A2 --> TYPES : <<imports>>
+AT --> TYPES : <<imports>>
+SL --> TYPES : <<imports>>
+
+MAIN --> ISSE : new EventSource()\nconectaSSE()
+MAIN --> IAPI : POST process-next\nPOST confirm-hypothesis\nPOST seek\nPOST finish
+
+note right of STORE
+  Estado global:
+  • alerts: AlertPayload[]
+  • activeWindows: WindowState[]
+  • agent2Reports: Agent2Report[]
+  • graphState: HypothesisGraphState
+  • connection: string
+  • sliceState: SliceState
+  Persistido em sessionStorage
+end note
+
+note right of MAIN
+  Ponto de entrada único.
+  Orquestra:
+  • SSE event loop
+  • Render pipeline
+  • Timer management
+  • Extension push
+  • User events
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 2 — CLASSES E INTERFACES (TIPOS)
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_classes
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ClassBorderColor #94a3b8
+skinparam ClassBackgroundColor #f8fafc
+skinparam ClassFontColor #0f172a
+skinparam ClassHeaderBackgroundColor #e2e8f0
+skinparam ClassAttributeFontColor #334155
+skinparam ClassStereotypeFontColor #64748b
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f8fafc
+
+title Dashboard Frontend — Interfaces TypeScript (UML 2.x)
+
+package "src/core/types.ts" {
+
+  interface AlertPayload {
+    + number: string
+    + title: string
+    + severity: string
+    + category: string
+    + ts: string
+    + source: string
+    + affected_asset: string
+    + mitre: string
+    + kill_chain: string
+    + phases_detected: string[]
+    + classifications: CISOClassification[]
+    + primary_ciso: CISOClassification
+    + soc_routing: string
+    + tlp: string
+    + tags: string
+    + emitted_at: string
+    + detected_threat_type: string
+    + ciso_state: string
+    + phase_score: number
+    + trigger_type: string
+    + discard_reason: string
+    + is_discarded: boolean
+    + window_id?: string
+  }
+
+  interface CISOClassification {
+    + ciso_category_id: number
+    + ciso_category_name: string
+    + risk_tier: RiskTier
+    + plausibility: number
+  }
+
+  interface WindowHypothesis {
+    + probability: number
+    + category: string
+    + risk_tier: string
+    + evidenceCount: number
+    + evidenceGap: number
+  }
+
+  interface WindowState {
+    + window_id: string
+    + created_at_ms: number
+    + expires_at_ms: number
+    + alert_count: number
+    + phases: string[]
+    + phase_score: number
+    + is_closed: boolean
+    + current_ciso_options: WindowHypothesis[]
+    + confirmed_label?: string
+    + confirmed_by?: string
+    + close_reason?: string
+  }
+
+  interface Agent2Report {
+    + metadata: ReportMetadata
+    + ciso_report: CISOSection
+    + soc_report: SOCSection
+    + decision: DecisionSection
+    + executive_summary: string
+    + confirmed_hypotheses: ConfirmedHypothesis[]
+    + recommended_actions: string[]
+    + regulatory_impact: RegImpact
+  }
+
+  interface HypothesisGraphState {
+    + nodes: HypothesisGraphNode[]
+    + edges: HypothesisGraphEdge[]
+    + confirmed_hypotheses: string[]
+    + kill_chain_progress: Record<string, number>
+  }
+
+  interface HypothesisGraphNode {
+    + id: string
+    + label: string
+    + score: number
+    + confirmed: boolean
+    + risk_tier: string
+    + evidence_count: number
+  }
+
+  interface HypothesisGraphEdge {
+    + source: string
+    + target: string
+    + weight: number
+  }
+
+  interface SliceState {
+    + dataMinMs: number
+    + dataMaxMs: number
+    + windowStartMs: number
+    + speedFactor: number
+    + totalAlerts: number
+    + currentIndex: number
+  }
+
+  interface TimelineAlert {
+    + number: string
+    + timestamp_ms: number
+    + category: string
+    + type: string
+    + phase?: string
+    + severity?: string
+    + window_id?: string
+  }
+
+  interface AlertTimelineOptions {
+    + alerts: TimelineAlert[]
+    + height: number
+    + selectedAlertNumber?: string
+    + onAlertClick?: (alert: TimelineAlert) => void
+  }
+
+}
+
+' Relações
+WindowState "1" o-- "0..*" WindowHypothesis : current_ciso_options
+AlertPayload "1" o-- "0..*" CISOClassification : classifications
+AlertPayload "1" *-- "1" CISOClassification : primary_ciso
+Agent2Report "1" *-- "1" HypothesisGraphState : graph context
+AlertTimelineOptions "1" o-- "0..*" TimelineAlert : alerts
+HypothesisGraphState "1" *-- "0..*" HypothesisGraphNode : nodes
+HypothesisGraphState "1" *-- "0..*" HypothesisGraphEdge : edges
+
+note bottom of WindowState
+  Estado local do frontend —
+  enriquecido progressivamente:
+  window_created → window_updated
+  → hypothesis_confirmed
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 3 — SEQUÊNCIA: PROCESSAMENTO DE UM ALERTA
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_sequence_alert
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title Dashboard Frontend — Sequência: Ciclo de Processamento de Alerta (UML 2.x)
+
+actor Analista as UI
+participant "slice.ts\n(countdown)" as SL
+participant "main.ts\n(SSE loop)" as MAIN
+participant "SSE Server\n:5001" as SSE
+participant "store.ts" as ST
+participant "windows_panel.ts" as WP
+participant "agent2.ts" as A2
+participant "alert_timeline.ts" as AT
+
+UI -> MAIN : DOMContentLoaded\n/ connectSSE()
+MAIN -> SSE : new EventSource('/events')
+SSE --> MAIN : SSE stream aberto
+
+MAIN -> SSE : POST /api/agent1/process-next\n{alert_index: 0}
+note right of MAIN
+  requestProcessAlert(index)
+  envia o pedido de processamento
+  ao SSE Server. O servidor
+  dispara o Agent 1.
+end note
+
+SSE --> MAIN : event: dataset_bounds\n{dataMinMs, dataMaxMs, total_alerts,\n first_alert, second_alert}
+MAIN -> SL : setDatasetBounds(min, max)
+MAIN -> SL : updateCurrentAlertDisplay(\n  number, category, type, ts)
+MAIN -> MAIN : renderFull()
+
+SSE --> MAIN : event: agent1_progress\n{index, total, active_windows}
+
+SSE --> MAIN : event: next_alert_info\n{next_alert, gap_ms}
+MAIN -> SL : updateNextAlertInfo(alert, gap)
+SL -> SL : startCountdown(seconds, alert, cb)
+
+SL --> MAIN : [callback após countdown]\nonComplete()
+MAIN -> SSE : POST /api/agent1/process-next\n{alert_index: N+1}
+
+SSE --> MAIN : event: alert {AlertPayload}
+MAIN -> ST : addAlert(payload)\nsetAlerts([...alerts, payload])
+MAIN -> AT : updateTimelineDisplay()
+
+alt [window_id associado]
+  MAIN -> WP : _activeWindows[i].alerts.push(payload)
+end
+
+SSE --> MAIN : event: window_created\n{window_id, ciso_options,\n trigger_alert, expires_at_ms}
+MAIN -> ST : addWindow(windowData)
+MAIN -> MAIN : _activeWindows.unshift(newWindow)
+MAIN -> MAIN : startWindowTimeout(window_id, expires_at_ms)
+MAIN -> MAIN : renderFull()
+
+SSE --> MAIN : event: window_updated\n{window_id, ciso_options,\n phase_score, phases}
+MAIN -> MAIN : _activeWindows[i] = {...merged}
+MAIN -> WP : renderWindowsPanel(_activeWindows)
+
+opt [prob_top ≥ 75% AND NOT pushed]
+  MAIN -> MAIN : _pushWindowContextToExtension(w)
+  MAIN -> MAIN : window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*')
+end
+
+SSE --> MAIN : event: hypothesis_confirmed\n{label, score, method, window_id}
+MAIN -> MAIN : _pendingReports.add(label)
+MAIN -> MAIN : _activeWindows[i].is_closed = true\nconfirmed_by = method
+MAIN -> MAIN : renderFull()
+
+SSE --> MAIN : event: ciso_report {report}
+MAIN -> ST : setAgent2Reports([report, ...prev])
+MAIN -> ST : persistAgent2()
+MAIN -> MAIN : _pendingReports.delete(label)
+MAIN -> A2 : renderAgent2Panel(reports)
+MAIN -> MAIN : renderFull()
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 4 — SEQUÊNCIA: CONFIRMAÇÃO MANUAL DO OPERADOR
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_sequence_confirm
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title Dashboard Frontend — Sequência: Confirmação Manual pelo Operador (UML 2.x)
+
+actor Analista as UI
+participant "windows_panel.ts\n(DOM)" as WP
+participant "main.ts" as MAIN
+participant "SSE Server\n:5001" as SSE
+participant "Agent 2\n(GraphReporter)" as A2
+
+note over UI, WP
+  Botão de confirmação aparece no card
+  quando prob_top ≥ 75%.
+  Cada botão mostra tier + probabilidade.
+  ex: [CR 85%] [HI 10%] [LO 5%]
+end note
+
+UI -> WP : click [CR 85%]\n__wmConfirmHypothesis(\n  windowId, hypothesis_label)
+WP -> SSE : POST /api/agent1/confirm-hypothesis\n{window_id, hypothesis_label}
+
+note right of WP
+  Não espera pelo SSE.
+  Fecha o card imediatamente
+  via CustomEvent.
+end note
+
+WP -> WP : window.dispatchEvent(\n  'wm-operator-confirmed',\n  {windowId, label})
+
+MAIN -> MAIN : [listener] _activeWindows[i] = {\n  is_closed: true,\n  close_reason: "✋ label",\n  confirmed_by: "operator"\n}
+MAIN -> MAIN : _pendingReports.add(label)
+MAIN -> MAIN : _updatePendingBadge()\n⏳ N em fila
+MAIN -> MAIN : renderFull()
+note right of MAIN
+  Card desaparece das ACTIVAS
+  e aparece em FECHADAS com
+  badge "✋ Confirmado pelo analista"
+  Badge ⏳ N em fila aparece em
+  📋 Intelligence Reports
+end note
+
+SSE --> MAIN : event: hypothesis_confirmed\n{label, method: "operator",\n window_id, score}
+note right of MAIN
+  SSE confirma depois do POST.
+  O card já está fechado —
+  o evento apenas sincroniza
+  o estado (idempotente).
+end note
+
+SSE -> A2 : trigger_report_now(\n  label, score, ts, tier, "operator")
+A2 -> A2 : _enqueue(label)\n_process_queue()
+
+A2 -> SSE : POST /ingest\n{type: "ciso_report", payload}
+SSE --> MAIN : event: ciso_report {report}
+
+MAIN -> MAIN : _pendingReports.delete(label)
+MAIN -> MAIN : _updatePendingBadge()
+MAIN -> MAIN : renderFull()
+note right of MAIN
+  Badge ⏳ desaparece.
+  Novo card aparece em
+  📋 Intelligence Reports
+  com methodIcon ✋ e
+  contexto da janela.
+end note
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 5 — ACTIVIDADE: PIPELINE DE RENDER
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_render_pipeline
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #e2e8f0
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #94a3b8
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Dashboard Frontend — Pipeline de Render (UML 2.x, swimlanes)
+
+|main.ts|
+start
+:Trigger de render:\nSSE event recebido\nOU user interaction\nOU timer tick;
+
+:renderFull();
+
+fork
+  |alert_timeline.ts|
+  :updateTimelineDisplay()\n→ getAlerts()\n→ renderAlertTimelineSVG(\n    alerts, height=72,\n    selectedAlertNumber,\n    onAlertClick → extension\n  )\n→ innerHTML do #timeline-content\n→ auto-scroll para o fim;
+fork again
+  |windows_panel.ts|
+  :renderWindowsPanel(\n  _activeWindows, nowMs\n);
+  :Filtrar: alert_count > 0;
+  :Separar ACTIVAS / FECHADAS;
+  note right
+    Card ACTIVA (4 linhas):
+    1. 🕐 09:00→09:19 📊N Score:N ⏱
+    2. 🎯 N Fases: Ph→Ph
+    3. Alert Timeline SVG
+    4. Hipóteses com botões CR/HI%
+    ─────────────────────────────
+    Card FECHADA (minimal):
+    09:00→09:05 [85% Hypothesis] [📊N]
+    + badge ✋/⏱/⚡
+  end note
+  :→ innerHTML do #windows-panel;
+fork again
+  |graph_viz.ts|
+  :renderHypothesisGraph(\n  _graphState\n)\n→ SVG do grafo de hipóteses\n→ nós coloridos por tier\n→ edges ponderadas\n→ innerHTML do #hypothesis-graph;
+fork again
+  |agent2.ts|
+  :renderAgent2Panel(\n  [], 0,\n  agent2Reports,\n  {}\n);
+  :Para cada report:;
+  :card com label, tier, %,\n methodIcon (✋/⏱/⚡),\n windowCtx (alertas, score,\n fases, timestamps)\n→ botão ⊞ abre relatório PDF;
+  :→ innerHTML do #agent2-panel;
+fork again
+  |slice.ts|
+  :syncSliceInputs()\nupdateSliceLabels()\nupdateCurrentAlertDisplay()\n→ DOM do slicer temporal;
+fork again
+  |sidebar.ts kpi.ts footer.ts|
+  :renderSidebarKPIs()\nrenderKPIStrip()\nrenderScoreFilter()\nrenderConnectionBadge()\n→ DOM das secções auxiliares;
+end fork
+
+|main.ts|
+:_activeWindows\n  .filter(w => !w.is_closed)\n  .forEach(_pushWindowContextToExtension);
+if (prob_top ≥ 75%\nAND NOT in _pushedToExtension?) then (sim)
+  :window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*'\n)\n→ Chrome Extension;
+else (não)
+end if
+
+:_updatePendingBadge()\nbadge ⏳ N em fila;
+
+stop
+@enduml
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 6 — DEPLOYMENT: FRONTEND + EXTENSÃO
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_deployment
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam NodeBorderColor #94a3b8
+skinparam NodeBackgroundColor #f1f5f9
+skinparam NodeFontColor #0f172a
+skinparam ArtifactBorderColor #64748b
+skinparam ArtifactBackgroundColor #f8fafc
+skinparam ArtifactFontColor #334155
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #e2e8f0
+skinparam ComponentFontColor #0f172a
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Dashboard Frontend — Deployment: Browser + Extensão (UML 2.x)
+
+node "Servidor SOC" as SERVER {
+  node "SSE Server\n:5001" as SSE_NODE {
+    component [SSE Broker\n/events + /ingest] as SSE
+    artifact "frontend/dist/\nindex.html + assets" as DIST
+    note bottom of SSE_NODE
+      Serve a SPA estática
+      e o stream SSE na
+      mesma porta 5001
+    end note
+  }
+  node "FastAPI Backend\n:8000" as API_NODE {
+    component [CVE / SIEM / Chat\nServices] as API
+  }
+}
+
+node "Browser Chrome" as BROWSER {
+
+  node "Tab: localhost:5001\nDashboard SPA" as TAB {
+
+    node "Vite Bundle\n(compilado de src/)" as BUNDLE {
+      component [main.ts\nOrchestrador] as MAIN
+      component [windows_panel.ts] as WP
+      component [agent2.ts] as A2C
+      component [alert_timeline.ts] as ATC
+      component [slice.ts] as SLC
+      component [graph_viz.ts] as GVC
+      component [store.ts\nsessionStorage] as ST
+
+      artifact "sessionStorage\nagent2_reports\nhypotheses\nslice_state" as SS
+    }
+
+    note bottom of TAB
+      Construído com Vite + TypeScript
+      Build: npm run build
+      Preview: npm run preview :4173
+      HMR em desenvolvimento: :5173
+    end note
+  }
+
+  node "Chrome Extension\nRedShift CVE Agent" as EXT {
+    component [popup.ts\nUI do popup] as POPUP
+    component [content.ts\nContent Script] as CONTENT
+    component [background.ts\nService Worker] as BG
+
+    artifact "chrome.storage.local\npendingWindowContext\npendingCve" as CST
+
+    note bottom of EXT
+      Compilado com webpack
+      Load unpacked: dist/
+      Porta de comunicação:
+      window.postMessage()
+    end note
+  }
+
+}
+
+' Server → Browser
+SSE_NODE --> TAB : GET :5001 (SPA)\nGET :5001/events (SSE stream)
+TAB --> SSE_NODE : POST :5001/api/agent1/*\n(process-next, confirm,\n seek, finish)
+TAB --> API_NODE : POST :8000/api/v1/*\n(CVE, SIEM, chat)
+
+' SPA → Extension
+MAIN --> CONTENT : window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*'\n)
+CONTENT --> BG : chrome.runtime.sendMessage(\n  CVE_DETECTED /\n  WINDOW_CONTEXT_READY\n)
+BG --> POPUP : chrome.storage.local\n(pendingWindowContext)
+POPUP --> API_NODE : POST :8000/api/v1/analysis/cve\nPOST :8000/api/v1/analysis/siem\nPOST :8000/api/v1/analysis/chat
+
+' Estado persistido
+ST --> SS : sessionStorage.setItem()
+BG --> CST : chrome.storage.local.set()
+
+note right of CONTENT
+  Listeners:
+  • window.addEventListener('message')
+    → filtra REDSHIFT_WINDOW_CONTEXT
+  • chrome.runtime.onMessage
+    → GET_DETECTED_CVES
+  Try/catch em todas as chamadas
+  chrome.runtime.* para suportar
+  extension context invalidation
+end note
+
+note right of POPUP
+  Fluxo de análise:
+  1. checkBackendStatus() → /health
+  2. fetchBackendConfig() → /api/config
+  3. consumePendingWindowContext()
+  4. renderWindowContext() → card SOC
+  5. Analista clica "Analisar no SIEM"
+  6. POST /api/v1/analysis/siem
+  7. LLM responde → mostra análise
+end note
+@enduml

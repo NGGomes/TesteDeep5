@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RedShift CVE Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+<div class="header">
+<div class="header-brand">
+ <div class="brand-mark">RS</div>
+ <div>
+ <div class="brand-name">RedShift CVE Agent</div>
+ </div>
+</div>
+<div class="header-status">
+ <div class="status-dot checking" id="status-dot"></div>
+ <span class="status-text" id="status-text">A verificar…</span>
+</div>
+</div>
+
+<div class="tabs">
+<button class="tab-btn active" data-tab="cve">
+ <span class="tab-icon">🔍</span> CVE
+</button>
+<button class="tab-btn" data-tab="siem">
+ <span class="tab-icon">📊</span> SIEM
+</button>
+<button class="tab-btn" data-tab="chat">
+ <span class="tab-icon">💬</span> Chat
+</button>
+<button class="tab-btn" data-tab="history">
+ <span class="tab-icon">📋</span> Sessões
+</button>
+<button class="tab-btn" data-tab="settings">
+ <span class="tab-icon">⚙️</span>
+</button>
+</div>
+
+<div class="panel active" id="panel-cve">
+<div class="query-bar">
+ <div class="input-wrap">
+ <span class="input-prefix">CVE-</span>
+ <input
+  id="cve-input"
+  class="cve-input"
+  type="text"
+  placeholder="2026-5167"
+  spellcheck="false"
+  autocomplete="off"
+ />
+ </div>
+ <select id="detail-level" class="level-select" title="Nível de detalhe">
+ <option value="basic">Básico</option>
+ <option value="intermediate" selected>Médio</option>
+ <option value="advanced">Avançado</option>
+ </select>
+ <button id="analyze-btn" class="analyze-btn">Analisar</button>
+</div>
+
+<div class="loading-state" id="cve-loading">
+ <div class="loading-spinner"></div>
+ <div class="loading-steps">
+ <div class="loading-step" id="step-1"><div class="step-bullet"></div>A consultar NVD API…</div>
+ <div class="loading-step" id="step-2"><div class="step-bullet"></div>A normalizar dados CVE…</div>
+ <div class="loading-step" id="step-3"><div class="step-bullet"></div>A correlacionar MITRE ATT&CK…</div>
+ <div class="loading-step" id="step-4"><div class="step-bullet"></div>A gerar análise 360°…</div>
+ </div>
+</div>
+
+<div class="result-scroll" id="cve-result">
+ <div class="empty-state">
+ <div class="empty-icon">🛡️</div>
+ <div class="empty-title">Análise 360° de CVEs</div>
+ <div class="empty-desc">Introduz um identificador CVE (ex: <code style="font-family:monospace;font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--blue)">CVE-2026-5167</code>) e seleciona o nível de detalhe pretendido.</div>
+ </div>
+</div>
+</div>
+
+<div class="panel" id="panel-siem">
+<div class="siem-panel">
+ <div class="siem-label">Alerta JSON do Elastic Security</div>
+ <textarea
+ id="siem-input"
+ class="siem-textarea"
+ placeholder='{"rule.name":"Suspicious Outlook SMB","host.name":"workstation-042","rule.severity":"high","process.name":"OUTLOOK.EXE","destination.ip":"203.0.113.99"}'
+ spellcheck="false"
+ ></textarea>
+ <div class="siem-actions">
+ <button id="mock-btn" class="mock-btn">📥 Carregar Mock</button>
+ <button id="siem-analyze-btn" class="analyze-btn" style="flex:1">Analisar Alerta</button>
+ </div>
+</div>
+
+<div class="loading-state" id="siem-loading" style="padding-top:16px">
+ <div class="loading-spinner"></div>
+ <div class="loading-steps">
+ <div class="loading-step" id="siem-step-1"><div class="step-bullet"></div>A processar alerta SIEM…</div>
+ <div class="loading-step" id="siem-step-2"><div class="step-bullet"></div>A identificar padrões de ataque…</div>
+ <div class="loading-step" id="siem-step-3"><div class="step-bullet"></div>A gerar análise com LLM…</div>
+ </div>
+</div>
+
+<div class="result-scroll" id="siem-result" style="display:none"></div>
+</div>
+
+<div class="panel" id="panel-chat">
+<div class="chat-messages" id="chat-messages">
+ <div class="msg agent">
+ <div class="msg-avatar">🤖</div>
+ <div>
+  <div class="msg-bubble">
+  Olá! Sou o <strong>Agente RedShift</strong>. Posso ajudar-te a analisar CVEs, interpretar alertas SIEM e correlacionar com o framework MITRE ATT&CK.<br><br>
+  Experimenta perguntar: <em>"Explica a CVE-2026-5167"</em> ou <em>"O que é T1566.001?"</em>
+  </div>
+  <div class="msg-time">Agora</div>
+ </div>
+ </div>
+</div>
+<div class="chat-input-bar">
+ <input
+ id="chat-input"
+ class="chat-input"
+ type="text"
+ placeholder="Pergunta ao agente de segurança…"
+ />
+ <button id="chat-send" class="send-btn">➤</button>
+</div>
+</div>
+
+<div class="panel" id="panel-history">
+<div class="history-toolbar">
+ <span class="history-count" id="history-count">0 sessões guardadas</span>
+ <button class="clear-btn" id="clear-history">Limpar tudo</button>
+</div>
+<div class="history-list" id="history-list">
+ <div class="history-empty">Nenhuma análise guardada ainda.</div>
+</div>
+</div>
+
+<div class="panel" id="panel-settings">
+<div class="settings-panel">
+ <div class="settings-group">
+ <div class="settings-group-title">// Servidor Backend</div>
+ <div class="setting-row">
+  <div>
+  <div class="setting-label">URL do Servidor</div>
+  <div class="setting-sublabel">FastAPI + LiteLLM</div>
+  </div>
+  <input id="setting-api-url" class="setting-input" type="text" placeholder="http://localhost:8000" />
+ </div>
+ </div>
+ <div class="settings-group">
+ <div class="settings-group-title">// Modelo LLM</div>
+ <div class="setting-row">
+  <div>
+  <div class="setting-label">Modelo Ativo</div>
+  <div class="setting-sublabel">Configurado no .env</div>
+  </div>
+  <input id="setting-model-display" class="setting-input" type="text" readonly style="opacity:0.6;cursor:not-allowed" placeholder="—" />
+ </div>
+ <div class="setting-row">
+  <div>
+  <div class="setting-label">Idioma padrão</div>
+  </div>
+  <select id="setting-lang" class="setting-select">
+  <option value="pt" selected>Português (PT)</option>
+  <option value="en">English</option>
+  </select>
+ </div>
+ </div>
+ <div class="settings-group">
+ <div class="settings-group-title">// Interface</div>
+ <div class="setting-row">
+  <div>
+  <div class="setting-label">Nível padrão</div>
+  </div>
+  <select id="setting-default-level" class="setting-select">
+  <option value="basic">Básico</option>
+  <option value="intermediate" selected>Intermédio</option>
+  <option value="advanced">Avançado</option>
+  </select>
+ </div>
+ </div>
+ <button id="save-settings-btn" class="save-settings-btn">Guardar Definições</button>
+</div>
+</div>
+
+<div class="footer">
+<div class="footer-model">
+ <div class="footer-model-dot" id="footer-model-dot"></div>
+ <span id="footer-model-label">Modelo: —</span>
+</div>
+<div class="footer-session" id="footer-session">sessão —</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="popup.js"></script>
+</body>
+</html>

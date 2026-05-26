@@ -1,0 +1,83 @@
+' ═══════════════════════════════════════════════════════════════════
+' BACKEND — DIAGRAMA 3: SEQUÊNCIA CVE ANALYSIS
+' ═══════════════════════════════════════════════════════════════════
+@startuml backend_sequence
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title FastAPI Backend — Sequência: Análise CVE + SIEM
+
+participant "Chrome\nExtension" as EXT
+participant "FastAPI\n:8000" as APP
+participant "CVEService" as CVES
+participant "LLMService\n(litellm)" as LLMS
+participant "NVD API\n(externo)" as NVD
+participant "LLM Runtime\n(externo)" as LLM
+
+== Análise CVE ==
+
+EXT -> APP : POST /api/v1/analysis/cve\n{cve_id: "CVE-2024-1234",\n level: "intermediate"}
+APP -> APP : ext_cve_analysis(body)\n validar cve_id
+
+APP -> CVES : fetch_cve("CVE-2024-1234")
+CVES -> CVES : _is_cache_valid(\n  data/cve_cache/CVE-2024-1234.json\n)
+
+alt [cache válida — age < CVE_CACHE_TTL]
+  CVES --> APP : cve_data (de disco)
+  note right of CVES
+    Cache hit:
+    leitura de JSON local
+    sem chamada à NVD API
+  end note
+else [cache inexistente ou expirada]
+  CVES -> NVD : GET /rest/json/cves/2.0\n?cveId=CVE-2024-1234
+  NVD --> CVES : vulnerabilities JSON
+  CVES -> CVES : _parse_cve(raw)\nextrair descrição, CVSS,\nafected_products, references
+  CVES -> CVES : cache_file.write_text()\nguardar em disco
+  CVES --> APP : cve_data: dict
+end
+
+APP -> LLMS : analyze_cve(cve_data, level)
+LLMS -> LLMS : construir prompt:\n• CVE ID + descrição\n• CVSS score + vector\n• affected products\n• weaknesses\n• detail_level
+
+LLMS -> LLM : litellm.acompletion(\n  model=ACTIVE_LLM_MODEL,\n  messages=[system, user],\n  max_tokens=MAX_TOKENS,\n  timeout=LLM_TIMEOUT\n)
+LLM --> LLMS : completion response
+LLMS -> LLMS : extrair text + model_used
+LLMS --> APP : analysis: str, model: str
+
+APP --> EXT : 200 OK\n{cve_id, cve_data,\n analysis, model_used}
+
+== Análise SIEM Alert ==
+
+EXT -> APP : POST /api/v1/analysis/siem\n{alert: {rule.name, severity,\n kill_chain, ...},\n detail_level: "intermediate"}
+APP -> LLMS : analyze_siem_alert(\n  alert_json, detail_level)
+LLMS -> LLMS : construir prompt:\n• alert fields\n• kill chain context\n• severity\n• detail level
+
+LLMS -> LLM : litellm.acompletion()
+LLM --> LLMS : completion
+LLMS --> APP : analysis: str, model: str
+APP --> EXT : 200 OK\n{analysis, model_used}
+
+== Chat contextual ==
+
+EXT -> APP : POST /api/v1/analysis/chat\n{messages: [{role, content}, ...]}
+APP -> LLMS : _call_llm(history_as_prompt)
+LLMS -> LLM : litellm.acompletion()
+LLM --> LLMS : reply
+APP --> EXT : 200 OK\n{reply, model_used}
+@enduml

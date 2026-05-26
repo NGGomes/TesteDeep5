@@ -1,0 +1,100 @@
+' ═══════════════════════════════════════════════════════════════════
+' EXTENSÃO — DIAGRAMA 5: COMPONENTES
+' ═══════════════════════════════════════════════════════════════════
+@startuml extension_components
+!theme plain
+
+top to bottom direction
+skinparam linetype ortho
+skinparam nodesep 90
+skinparam ranksep 300
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title RedShift CVE Agent — Componentes e Interfaces
+
+package "Chrome Extension (dist/)" {
+
+  component [popup.ts\nUI principal (5 tabs)] as POPUP
+  component [content.ts\nContent Script\n(injected em localhost:5001)] as CONTENT
+  component [background.ts\nService Worker] as BG
+
+  interface "chrome.storage.local" as ISTORAGE
+  interface "chrome.runtime.sendMessage" as IMSG
+  interface "chrome.runtime.onMessage" as IONMSG
+  interface "window.postMessage()" as IPOST
+  interface "chrome.action.setBadgeText" as IBADGE
+
+  POPUP - ISTORAGE
+  POPUP - IMSG
+  BG - IONMSG
+  BG - IBADGE
+  CONTENT - IPOST
+  CONTENT - IMSG
+  CONTENT - ISTORAGE
+}
+
+package "Dashboard SPA (localhost:5001)" {
+  component [windows_panel.ts\n__wmPushAlertToExtension()] as WP
+  component [main.ts\n_pushWindowContextToExtension()] as MAIN_SPA
+  interface "window.addEventListener('message')" as ILISTEN
+  WP - ILISTEN
+  MAIN_SPA - ILISTEN
+}
+
+package "FastAPI Backend (:8000)" {
+  interface "GET /health" as IHEALTH
+  interface "GET /api/config" as ICONFIG
+  interface "POST /api/v1/analysis/cve" as ICVE_A
+  interface "POST /api/v1/analysis/siem" as ISIEM_A
+  interface "POST /api/v1/analysis/chat" as ICHAT_A
+}
+
+' Comunicação
+MAIN_SPA --> IPOST : window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*')
+WP --> IPOST : window.postMessage(\n  REDSHIFT_WINDOW_CONTEXT, '*')\n[ao clicar pin trigger]
+
+CONTENT --> ILISTEN : addEventListener('message')\n[filtra REDSHIFT_WINDOW_CONTEXT]
+CONTENT --> ISTORAGE : chrome.storage.local.set(\n  pendingWindowContext)
+CONTENT --> IMSG : sendMessage(\n  CVE_DETECTED /\n  WINDOW_CONTEXT_READY)
+
+BG --> IONMSG : onMessage.addListener()
+BG --> IBADGE : setBadgeText(count)\nsetBadgeBackgroundColor()
+
+POPUP --> ISTORAGE : get pendingWindowContext\nget pendingCve\nget settings\nget sessions
+POPUP --> IMSG : sendMessage(CLEAR_BADGE)
+
+POPUP --> IHEALTH : checkBackendStatus()
+POPUP --> ICONFIG : fetchBackendConfig()
+POPUP --> ICVE_A : fetchCveAnalysis()
+POPUP --> ISIEM_A : handleSiemAnalyze()
+POPUP --> ICHAT_A : handleChatSend()
+
+note right of CONTENT
+  Try/catch em todas as
+  chrome.runtime.* calls —
+  suporta extension context
+  invalidation após reload
+end note
+
+note right of BG
+  Mensagens tratadas:
+  • CVE_DETECTED → badge count
+  • WINDOW_CONTEXT_READY → badge ▸
+  • OPEN_WITH_CVE → badge !
+  • CLEAR_BADGE → limpa badge
+end note
+@enduml

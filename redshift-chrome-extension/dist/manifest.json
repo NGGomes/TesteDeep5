@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name":             "RedShift CVE Agent",
+  "version":          "1.1.0",
+  "description":      "Análise 360º de CVEs e alertas SIEM com IA — integrado com SOC Dashboard",
+
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "tabs",
+    "clipboardRead"
+  ],
+
+  "host_permissions": [
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*",
+    "http://localhost:5001/*",
+    "http://127.0.0.1:5001/*"
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "RedShift CVE Agent"
+  },
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/app/security/*",
+        "https://*/kibana/*",
+        "http://localhost:*/app/security/*",
+        "http://localhost:*/kibana/*",
+        "http://localhost:5001/*",
+        "http://127.0.0.1:5001/*"
+      ],
+      "js":     ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*.png"],
+      "matches":   ["<all_urls>"]
+    }
+  ]
+}

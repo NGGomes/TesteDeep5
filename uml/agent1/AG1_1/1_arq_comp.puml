@@ -1,0 +1,84 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 1 — ARQUITECTURA DE COMPONENTES
+' ═══════════════════════════════════════════════════════════════════
+
+
+!theme plain
+
+top to bottom direction
+skinparam linetype ortho
+skinparam nodesep 90
+skinparam ranksep 90
+
+skinparam roundcorner 10
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 11
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam ComponentFontColor #1e293b
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam PackageFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Arquitectura de Componentes
+
+package "Entrada de Dados" {
+  component [Dataset (.txt)] as DS
+  component [SSE Frontend\nrequestProcessAlert()] as FE
+}
+
+package "Agent 1 — Núcleo" {
+  component [main.py\nOrchestrador] as MAIN
+  component [process_alert_loop()\nFila de alertas] as PAL
+  component [WindowManager\nGestão de janelas] as WM
+  component [AdaptiveWindow\nJanela de correlação] as AW
+  component [HypothesisGraph\nGrafo de hipóteses] as HG
+  component [ProbabilisticClassifier\nClassificador bayesiano] as PC
+note right of AW
+  Janela adaptativa:
+  duração base + extensão
+  por peso da fase kill-chain
+  RECON=5 → IMPACT=30 min
+end note
+
+note right of PC 
+  Classificador probabilístico
+  online (Naive Bayes)
+  actualizado por feedback
+  do operador
+end note
+}
+
+package "Saída / Integração" {
+  component [SSE Server\nporta 5001] as SSE
+  component [Agent 2\nGraph Reporter] as A2
+  component [Dashboard Frontend] as DASH
+}
+
+DS --> MAIN : carrega alertas
+FE --> SSE : POST /api/agent1/process-next\n\n\n
+SSE -right--> MAIN : callback HTTP :8002\n\n\n\n\n\n
+MAIN --> PAL : enqueue(alert)
+PAL --> WM : on_alert()
+WM --> AW : add_alert() / cria janela
+AW --> PC : classify(phases)
+PC --> AW : ciso_options[3]
+AW --> HG : add_evidence()
+HG --> HG : decay + update scores
+
+AW --> SSE : window_created / window_updated
+AW --> SSE : window_closed
+HG --> SSE : hypothesis_confirmed\n
+MAIN --> SSE : agent1_progress\nnext_alert_info
+SSE --> DASH : Server-Sent Events
+
+HG -left--> A2 : get_confirmed_hypotheses()
+SSE --> A2 : trigger_report_now()
+@enduml

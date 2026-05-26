@@ -1,0 +1,123 @@
+Análise do Log (Dashboard - Eventos SSE)
+Este log mostra os eventos Server-Sent Events (SSE) recebidos pelo frontend do Dashboard durante a execução de uma simulação completa (possivelmente múltiplas execuções ao longo do tempo).
+
+📊 Resumo da Execução Principal (Maio 17)
+Métrica	Valor
+Duração da execução principal	~50 minutos (09:49:47 → 10:40:55)
+Total de alertas processados	37
+Hipóteses confirmadas	~10 tipos diferentes
+Janelas de análise criadas	~150+
+Conexão SSE ativa	Sim, com pings periódicos
+🏷️ Tipos de Eventos SSE Observados
+Tipo de Evento	Descrição	Frequência
+ping	Keep-alive da conexão	A cada ~5-10 segundos
+hypothesis_confirmed	Hipótese confirmada pelo Agent 1	~10-15 eventos
+window_created	Nova janela de análise criada	Centenas
+window_updated	Atualização de contagem de alertas	Centenas
+window_closed	Janela fechada por convergência	~5-10
+alert	Novo alerta processado	37
+agent1_progress	Progresso do Agent 1	37
+graph_state_update	Atualização do grafo de hipóteses	Constante
+ciso_report	Relatório CISO gerado	Múltiplos
+dataset_bounds	Informações do dataset	Em cada replay
+done	Fim do processamento	2-3 vezes
+🔥 Hipóteses Confirmadas (17 de Maio)
+Hora	Hipótese	Score
+09:49:47	Advanced Persistent Threats (APT)	85%
+09:49:49	Lateral Movement with Malware	85%
+09:49:51	Lateral Movement with Malware	85%
+09:49:53	Lateral Movement with Malware	85%
+09:49:55	Lateral Movement with Malware	85%
+09:49:57	Ransomware & Digital Extortion	85%
+09:49:59	Ransomware & Digital Extortion	85%
+09:50:01	Ransomware & Digital Extortion	85%
+09:50:03	Ransomware & Digital Extortion	85%
+09:50:05	APT Data Theft	85%
+09:50:07	APT Data Theft	85%
+09:50:09	Advanced Persistent Threats (APT)	85%
+09:50:11	Advanced Persistent Threats (APT)	85%
+09:50:13	Lateral Movement with Malware	85%
+09:50:15	Lateral Movement with Malware	85%
+09:50:17	Malware Deployment	85%
+09:50:19	Malware Deployment	85%
+09:50:21	Targeted Intrusion Campaign	85%
+09:50:23	Targeted Intrusion Campaign	85%
+...	(continua)	...
+11:13:40	Major Breach with Impact	85%
+📈 Estrutura de uma Janela de Análise
+Cada janela segue o padrão:
+
+text
+1. window_created  → ID único criado
+2. alert           → Primeiro alerta na janela
+3. window_updated  → alert_count: 1
+4. agent1_progress → Progresso do processamento
+5. graph_state_update → Atualização do grafo
+6. window_updated  → alert_count: 2, 3, 4...
+7. (opcional) hypothesis_confirmed → Quando atinge threshold
+8. window_closed   → Fechada por convergência
+🔄 Múltiplas Execuções Identificadas
+O log mostra vários replays do mesmo dataset (evidenciado pelos múltiplos eventos dataset_bounds):
+
+Timestamp	Observação
+09:49:47	Primeira execução
+10:12:36	Reinício (dataset_bounds)
+10:15:59	Reinício
+10:32:16	Reinício
+11:11:18	Reinício
+11:31:41	Reinício
+11:48:51	Reinício
+12:32:16	Reinício
+13:38:05	Reinício
+14:00:??	Reinício
+⚠️ Anomalias Identificadas
+1. Hipóteses sem nome (11:56:38)
+text
+"✓ CONFIRMED:  (0.0%)"
+Várias confirmações sem nome de hipótese e com score 0% - possivelmente erro de parsing ou hipóteses malformadas.
+
+2. Configuração de velocidade
+speed_factor: 0.5 - Os alertas são reproduzidos em câmera lenta (50% da velocidade original)
+
+3. Gaps grandes entre alertas
+gap_ms: 5100000 (~85 minutos), gap_ms: 10320000 (~172 minutos) - Intervalos longos no dataset original.
+
+📊 Estatísticas da Execução Principal (09:49-10:40)
+Janela ID	Alertas	Fechamento	Evidências
+e51695c3	1+	Confirmada APT	-
+9cb5bbba	1+	Confirmada Lateral Movement	-
+8e908869	1+	Confirmada Lateral Movement	-
+9d360778	1+	Confirmada Lateral Movement	-
+f5d3a18f	1+	Confirmada Lateral Movement	-
+bb8acb33	1+	Confirmada Ransomware	-
+94e84cf8	1+	Confirmada Ransomware	-
+93935d9b	1+	Confirmada Ransomware	-
+23f2f549	1+	Confirmada Ransomware	-
+9d4653d7	1+	Confirmada APT Data Theft	-
+d5415b8b	1+	Confirmada APT Data Theft	-
+669f865f	1+	Confirmada APT	-
+a91e4aee	1+	Confirmada APT	-
+7566d1f9	1+	Confirmada Lateral Movement	-
+d72eaebe	1+	Confirmada Lateral Movement	-
+0350a72c	1+	Confirmada Malware Deployment	-
+1a9f1376	1+	Confirmada Malware Deployment	-
+c018e757	1+	Confirmada Targeted Intrusion	-
+3b560bbe	1+	Confirmada Targeted Intrusion	-
+✅ Conclusão
+O Dashboard recebeu e processou corretamente todos os eventos SSE:
+
+✅ Criou janelas dinâmicas para cada alerta
+
+✅ Atualizou contagens e estado do grafo em tempo real
+
+✅ Exibiu confirmações de hipóteses com scores
+
+✅ Recebeu relatórios CISO gerados pelo Agent 2
+
+✅ Manteve conexão ativa com pings regulares
+
+✅ Suportou replay múltiplo do mesmo dataset
+
+Ponto de atenção: As confirmações com nome vazio e score 0% (11:56:38) indicam um bug que pode precisar de correção.
+
+This response is AI-generated, for reference only.

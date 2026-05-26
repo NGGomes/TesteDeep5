@@ -1,0 +1,85 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 4 — SEQUÊNCIA: CONFIRMAÇÃO MANUAL DO OPERADOR
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_sequence_confirm
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title Dashboard Frontend — Sequência: Confirmação Manual pelo Operador
+
+actor Analista as UI
+participant "windows_panel.ts\n(DOM)" as WP
+participant "main.ts" as MAIN
+participant "SSE Server\n:5001" as SSE
+participant "Agent 2\n(GraphReporter)" as A2
+
+note over UI, WP
+  Botao de confirmacao aparece no card
+  quando prob_top >= 75%.
+  Cada botao mostra tier + probabilidade.
+  ex: [CR 85%] [HI 10%] [LO 5%]
+end note
+
+UI -> WP : click [CR 85%]\n__wmConfirmHypothesis(\n  windowId, hypothesis_label)
+WP -> SSE : POST /api/agent1/confirm-hypothesis\n{window_id, hypothesis_label}
+
+note right of WP
+  Nao espera pelo SSE.
+  Fecha o card imediatamente
+  via CustomEvent.
+end note
+
+WP -> WP : window.dispatchEvent(\n  'wm-operator-confirmed',\n  {windowId, label})
+
+MAIN -> MAIN : [listener] _activeWindows[i] = {\n  is_closed: true,\n  close_reason: "[HAND] label",\n  confirmed_by: "operator"\n}
+MAIN -> MAIN : _pendingReports.add(label)
+MAIN -> MAIN : _updatePendingBadge()\n[HOURGLASS] N em fila
+MAIN -> MAIN : renderFull()
+note right of MAIN
+  Card desaparece das ACTIVAS
+  e aparece em FECHADAS com
+  badge "[HAND] Confirmado pelo analista"
+  Badge [HOURGLASS] N em fila aparece em
+  [CLIPBOARD] Intelligence Reports
+end note
+
+SSE --> MAIN : event: hypothesis_confirmed\n{label, method: "operator",\n window_id, score}
+note right of MAIN
+  SSE confirma depois do POST.
+  O card ja esta fechado —
+  o evento apenas sincroniza
+  o estado (idempotente).
+end note
+
+SSE -> A2 : trigger_report_now(\n  label, score, ts, tier, "operator")
+A2 -> A2 : _enqueue(label)\n_process_queue()
+
+A2 -> SSE : POST /ingest\n{type: "ciso_report", payload}
+SSE --> MAIN : event: ciso_report {report}
+
+MAIN -> MAIN : _pendingReports.delete(label)
+MAIN -> MAIN : _updatePendingBadge()
+MAIN -> MAIN : renderFull()
+note right of MAIN
+  Badge [HOURGLASS] desaparece.
+  Novo card aparece em
+  [CLIPBOARD] Intelligence Reports
+  com methodIcon [HAND] e
+  contexto da janela.
+end note
+@enduml

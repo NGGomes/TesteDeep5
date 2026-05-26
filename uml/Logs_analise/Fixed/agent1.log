@@ -1,0 +1,240 @@
+2026-05-20 13:21:55 [INFO] [agent1.mappings] Mappings module loaded
+2026-05-20 13:21:55 [INFO] [AGENT1_.window_manager] [WindowManager] mode=adaptive
+2026-05-20 13:21:55 [INFO] [agent1.console] ============================================================
+2026-05-20 13:21:55 [INFO] [agent1.console] Agent 1 - Cognitive Security Engine
+2026-05-20 13:21:55 [INFO] [agent1.console] Modo: Streaming (escuta alertas via callback HTTP)
+2026-05-20 13:21:55 [INFO] [agent1.console] Janela CISO: 15 minutos
+2026-05-20 13:21:55 [INFO] [agent1.console] Máx. hipóteses: 3
+2026-05-20 13:21:55 [INFO] [agent1.console] Threshold confirmação: 0.85
+2026-05-20 13:21:55 [INFO] [agent1.console] ============================================================
+2026-05-20 13:21:55 [INFO] [agent1.console] Carregando alertas de: D:\00-ISEL\Projeto\Documentacao\testeDeep_5\projD.txt
+2026-05-20 13:21:55 [INFO] [agent1.console] Carregados 37 alertas
+2026-05-20 13:21:55 [INFO] [agent1.main] Dataset bounds saved: 1777017600000 -> 1777056420000 (37 alerts)
+2026-05-20 13:21:55 [INFO] [agent1.console] Iniciando servidor de callbacks na porta 8002...
+2026-05-20 13:21:55 [INFO] [agent1.main] Agent 1 callback server listening on port 8002
+2026-05-20 13:21:55 [INFO] [agent1.console] Processamento de alertas iniciado. Aguardando alertas...
+2026-05-20 13:21:55 [INFO] [agent1.console] Loop de processamento iniciado - aguardando alertas...
+2026-05-20 13:21:55 [INFO] [agent1.console] Registando com servidor SSE...
+2026-05-20 13:21:58 [INFO] [agent1.main] [REGISTER] Sending to URL: http://localhost:5001/register-agent1
+2026-05-20 13:21:58 [INFO] [agent1.main] [REGISTER] Body: b'{"agent": "agent1", "status": "ready", "callback_url": "http://127.0.0.1:8002/ingest"}'
+2026-05-20 13:22:00 [INFO] [agent1.main] [REGISTER] Response: {'ok': True, 'message': 'Agent 1 registration acknowledged'}
+2026-05-20 13:22:00 [INFO] [agent1.console] ✓ Registado com sucesso.
+2026-05-20 13:22:00 [INFO] [agent1.console] 
+✅ Agente 1 pronto.
+2026-05-20 13:22:00 [INFO] [agent1.console]    37 alertas carregados no dataset.
+2026-05-20 13:22:00 [INFO] [agent1.console]    O slice.ts controla o ritmo de entrega dos alertas.
+2026-05-20 13:22:00 [INFO] [agent1.console]    O Agente 1 processa APENAS quando recebe callback.
+2026-05-20 13:22:00 [INFO] [agent1.console] 
+   Pressione Ctrl+C para parar.
+
+2026-05-20 13:22:02 [INFO] [agent1.main] Callback received: alert W101
+2026-05-20 13:22:02 [INFO] [agent1.console] [1/37] Processing: W101
+2026-05-20 13:22:02 [INFO] [agent1.main] Processing alert: W101
+2026-05-20 13:22:14 [INFO] [agent1.main] Callback received: alert W102
+2026-05-20 13:22:14 [INFO] [agent1.console] [2/37] Processing: W102
+2026-05-20 13:22:14 [INFO] [agent1.main] Processing alert: W102
+2026-05-20 13:22:25 [INFO] [agent1.main] Callback received: alert W103
+2026-05-20 13:22:25 [INFO] [agent1.console] [3/37] Processing: W103
+2026-05-20 13:22:25 [INFO] [agent1.main] Processing alert: W103
+2026-05-20 13:22:37 [INFO] [agent1.main] Callback received: alert W104
+2026-05-20 13:22:37 [INFO] [agent1.console] [4/37] Processing: W104
+2026-05-20 13:22:37 [INFO] [agent1.main] Processing alert: W104
+2026-05-20 13:22:48 [INFO] [agent1.main] Callback received: alert W105
+2026-05-20 13:22:48 [INFO] [agent1.console] [5/37] Processing: W105
+2026-05-20 13:22:48 [INFO] [agent1.main] Processing alert: W105
+2026-05-20 13:22:59 [INFO] [agent1.main] Callback received: alert W106
+2026-05-20 13:23:00 [INFO] [agent1.console] [6/37] Processing: W106
+2026-05-20 13:23:00 [INFO] [agent1.main] Processing alert: W106
+2026-05-20 13:23:11 [INFO] [agent1.main] Callback received: alert W107
+2026-05-20 13:23:11 [INFO] [agent1.console] [7/37] Processing: W107
+2026-05-20 13:23:11 [INFO] [agent1.main] Processing alert: W107
+2026-05-20 13:23:22 [INFO] [agent1.main] Callback received: alert W108
+2026-05-20 13:23:22 [INFO] [agent1.console] [8/37] Processing: W108
+2026-05-20 13:23:22 [INFO] [agent1.main] Processing alert: W108
+2026-05-20 13:23:34 [INFO] [agent1.main] Callback received: alert W109
+2026-05-20 13:23:34 [INFO] [agent1.console] [9/37] Processing: W109
+2026-05-20 13:23:34 [INFO] [agent1.main] Processing alert: W109
+2026-05-20 13:23:45 [INFO] [agent1.main] Callback received: alert W110
+2026-05-20 13:23:45 [INFO] [agent1.console] [10/37] Processing: W110
+2026-05-20 13:23:45 [INFO] [agent1.main] Processing alert: W110
+2026-05-20 13:23:57 [INFO] [agent1.main] Callback received: alert W111
+2026-05-20 13:23:57 [INFO] [agent1.console] [11/37] Processing: W111
+2026-05-20 13:23:57 [INFO] [agent1.main] Processing alert: W111
+2026-05-20 13:24:08 [INFO] [agent1.main] Callback received: alert W112
+2026-05-20 13:24:08 [INFO] [agent1.console] [12/37] Processing: W112
+2026-05-20 13:24:08 [INFO] [agent1.main] Processing alert: W112
+2026-05-20 13:24:19 [INFO] [agent1.main] Callback received: alert W113
+2026-05-20 13:24:19 [INFO] [agent1.console] [13/37] Processing: W113
+2026-05-20 13:24:19 [INFO] [agent1.main] Processing alert: W113
+2026-05-20 13:24:21 [INFO] [agent1.hypothesis_graph] *** AUTO-CONFIRMED: Major Breach with Impact (score=0.850, evidence=1) ***
+2026-05-20 13:24:23 [INFO] [agent1.main] Window evidence | window_id=605e64bc | phases=['EXFILTRATION', 'IMPACT'] | phase_score=15 | alert_count=3
+2026-05-20 13:24:23 [INFO] [agent1.main] *** CONFIRMED HYPOTHESIS: Major Breach with Impact (score=0.850) by auto ***
+2026-05-20 13:24:23 [INFO] [agent1.console] ✓ CONFIRMED (auto): Major Breach with Impact
+2026-05-20 13:24:35 [INFO] [agent1.main] Callback received: alert W114
+2026-05-20 13:24:35 [INFO] [agent1.console] [14/37] Processing: W114
+2026-05-20 13:24:35 [INFO] [agent1.main] Processing alert: W114
+2026-05-20 13:24:37 [INFO] [agent1.main] Window evidence | window_id=8a917c6b | phases=['EXFILTRATION', 'IMPACT'] | phase_score=15 | alert_count=3
+2026-05-20 13:24:48 [INFO] [agent1.main] Callback received: alert W115
+2026-05-20 13:24:48 [INFO] [agent1.console] [15/37] Processing: W115
+2026-05-20 13:24:48 [INFO] [agent1.main] Processing alert: W115
+2026-05-20 13:25:00 [INFO] [agent1.main] Callback received: alert W116
+2026-05-20 13:25:00 [INFO] [agent1.console] [16/37] Processing: W116
+2026-05-20 13:25:00 [INFO] [agent1.main] Processing alert: W116
+2026-05-20 13:25:11 [INFO] [agent1.main] Callback received: alert W201
+2026-05-20 13:25:11 [INFO] [agent1.console] [17/37] Processing: W201
+2026-05-20 13:25:11 [INFO] [agent1.main] Processing alert: W201
+2026-05-20 13:25:23 [INFO] [agent1.main] Callback received: alert W202
+2026-05-20 13:25:23 [INFO] [agent1.console] [18/37] Processing: W202
+2026-05-20 13:25:23 [INFO] [agent1.main] Processing alert: W202
+2026-05-20 13:25:34 [INFO] [agent1.main] Callback received: alert W203
+2026-05-20 13:25:34 [INFO] [agent1.console] [19/37] Processing: W203
+2026-05-20 13:25:34 [INFO] [agent1.main] Processing alert: W203
+2026-05-20 13:25:45 [INFO] [agent1.main] Callback received: alert W204
+2026-05-20 13:25:45 [INFO] [agent1.console] [20/37] Processing: W204
+2026-05-20 13:25:45 [INFO] [agent1.main] Processing alert: W204
+2026-05-20 13:25:57 [INFO] [agent1.main] Callback received: alert W205
+2026-05-20 13:25:57 [INFO] [agent1.console] [21/37] Processing: W205
+2026-05-20 13:25:57 [INFO] [agent1.main] Processing alert: W205
+2026-05-20 13:26:08 [INFO] [agent1.main] Callback received: alert W206
+2026-05-20 13:26:08 [INFO] [agent1.console] [22/37] Processing: W206
+2026-05-20 13:26:08 [INFO] [agent1.main] Processing alert: W206
+2026-05-20 13:26:20 [INFO] [agent1.main] Callback received: alert W301
+2026-05-20 13:26:20 [INFO] [agent1.console] [23/37] Processing: W301
+2026-05-20 13:26:20 [INFO] [agent1.main] Processing alert: W301
+2026-05-20 13:26:31 [INFO] [agent1.main] Callback received: alert W302
+2026-05-20 13:26:31 [INFO] [agent1.console] [24/37] Processing: W302
+2026-05-20 13:26:31 [INFO] [agent1.main] Processing alert: W302
+2026-05-20 13:26:42 [INFO] [agent1.main] Callback received: alert W303
+2026-05-20 13:26:42 [INFO] [agent1.console] [25/37] Processing: W303
+2026-05-20 13:26:42 [INFO] [agent1.main] Processing alert: W303
+2026-05-20 13:26:54 [INFO] [agent1.main] Callback received: alert W304
+2026-05-20 13:26:54 [INFO] [agent1.console] [26/37] Processing: W304
+2026-05-20 13:26:54 [INFO] [agent1.main] Processing alert: W304
+2026-05-20 13:27:05 [INFO] [agent1.main] Callback received: alert W401
+2026-05-20 13:27:05 [INFO] [agent1.console] [27/37] Processing: W401
+2026-05-20 13:27:05 [INFO] [agent1.main] Processing alert: W401
+2026-05-20 13:27:17 [INFO] [agent1.main] Callback received: alert W402
+2026-05-20 13:27:17 [INFO] [agent1.console] [28/37] Processing: W402
+2026-05-20 13:27:17 [INFO] [agent1.main] Processing alert: W402
+2026-05-20 13:27:28 [INFO] [agent1.main] Callback received: alert W501
+2026-05-20 13:27:28 [INFO] [agent1.console] [29/37] Processing: W501
+2026-05-20 13:27:28 [INFO] [agent1.main] Processing alert: W501
+2026-05-20 13:27:40 [INFO] [agent1.main] Callback received: alert W502
+2026-05-20 13:27:40 [INFO] [agent1.console] [30/37] Processing: W502
+2026-05-20 13:27:40 [INFO] [agent1.main] Processing alert: W502
+2026-05-20 13:27:51 [INFO] [agent1.main] Callback received: alert W503
+2026-05-20 13:27:51 [INFO] [agent1.console] [31/37] Processing: W503
+2026-05-20 13:27:51 [INFO] [agent1.main] Processing alert: W503
+2026-05-20 13:28:02 [INFO] [agent1.main] Callback received: alert W504
+2026-05-20 13:28:02 [INFO] [agent1.console] [32/37] Processing: W504
+2026-05-20 13:28:02 [INFO] [agent1.main] Processing alert: W504
+2026-05-20 13:28:14 [INFO] [agent1.main] Callback received: alert W505
+2026-05-20 13:28:14 [INFO] [agent1.console] [33/37] Processing: W505
+2026-05-20 13:28:14 [INFO] [agent1.main] Processing alert: W505
+2026-05-20 13:28:25 [INFO] [agent1.main] Callback received: alert N101
+2026-05-20 13:28:25 [INFO] [agent1.console] [34/37] Processing: N101
+2026-05-20 13:28:25 [INFO] [agent1.main] Processing alert: N101
+2026-05-20 13:28:36 [INFO] [agent1.main] Callback received: alert N102
+2026-05-20 13:28:36 [INFO] [agent1.console] [35/37] Processing: N102
+2026-05-20 13:28:36 [INFO] [agent1.main] Processing alert: N102
+2026-05-20 13:28:48 [INFO] [agent1.main] Callback received: alert N103
+2026-05-20 13:28:48 [INFO] [agent1.console] [36/37] Processing: N103
+2026-05-20 13:28:48 [INFO] [agent1.main] Processing alert: N103
+2026-05-20 13:29:01 [INFO] [agent1.main] Callback received: alert N104
+2026-05-20 13:29:01 [INFO] [agent1.console] [37/37] Processing: N104
+2026-05-20 13:29:01 [INFO] [agent1.main] Processing alert: N104
+2026-05-20 13:29:03 [INFO] [agent1.console] Todos os 37 alertas processados.
+
+' ===================
+
+Análise do Log (Apenas Agent 1)
+Este log é uma versão reduzida do anterior, focada exclusivamente no Agent 1 - Cognitive Security Engine, sem a parte de inicialização do sistema e sem o Agent 2.
+
+📊 Resumo da Execução
+Status: ✅ SUCESSO - Processamento completo dos 37 alertas
+
+Duração total: ~7 minutos (13:21:55 até 13:29:03)
+
+Alertas processados: 37/37
+
+⚙️ Configuração do Agent 1
+Parâmetro	Valor	Descrição
+Modo	Streaming (callback HTTP)	Escuta alertas via HTTP
+Janela CISO	15 minutos	Período de análise
+Máx. hipóteses	3	Limite de hipóteses ativas
+Threshold confirmação	0.85	Score mínimo para confirmar
+Porta callback	8002	Servidor HTTP para receber alertas
+📋 Processamento dos Alertas
+Padrão observado:
+
+Callback a cada ~11-12 segundos
+
+Processamento sequencial (um alerta por vez)
+
+Alertas categorizados por prefixo:
+
+W101 a W116 (alertas de warning)
+
+W201 a W206
+
+W301 a W304
+
+W401 a W402
+
+W501 a W505
+
+N101 a N104 (alertas normais?)
+
+🔥 Evento Crítico Detectado
+Às 13:24:21 - Confirmação automática:
+
+text
+*** AUTO-CONFIRMED: Major Breach with Impact (score=0.850, evidence=1) ***
+Detalhes do evento (13:24:23):
+
+Window ID: 605e64bc
+
+Fases envolvidas: EXFILTRATION → IMPACT
+
+Phase Score: 15
+
+Alertas na janela: 3
+
+Método: auto-confirmação (threshold 0.85)
+
+📈 Linha do Tempo
+text
+13:21:55 ─┬─ Agent 1 inicia
+          ├─ Carrega 37 alertas
+          ├─ Sobe servidor na porta 8002
+          └─ Registra no SSE server
+
+13:22:02 ─┬─ Início processamento (W101)
+13:22:14  ├─ W102
+13:22:25  ├─ W103
+...        │
+13:24:21  ├─ ⚠️ AUTO-CONFIRMED: Major Breach with Impact
+13:24:23  ├─ Confirmação registrada
+...        │
+13:29:03 ─┴─ Fim: "Todos os 37 alertas processados"
+🔍 Observações Relevantes
+Sem logs do Agent 2: Este log não mostra a geração de relatórios (diferente do anterior)
+
+Duas janelas de evidência detectadas:
+
+13:24:23 - window_id=605e64bc (3 alertas)
+
+13:24:37 - window_id=8a917c6b (3 alertas, mesmo padrão EXFILTRATION+IMPACT)
+
+Apenas uma confirmação: Apesar de duas janelas com mesmo padrão, apenas a primeira gerou confirmação (score 0.850)
+
+✅ Conclusão
+O Agent 1 funcionou perfeitamente dentro de sua responsabilidade:
+
+✅ Processamento sequencial dos 37 alertas
+
+✅ Detecção automática de breach (threshold 0.85)
+
+✅ Identificação correta das fases do ataque (EXFILTRATION → IMPACT)
+
+✅ Callback server operacional durante toda execução

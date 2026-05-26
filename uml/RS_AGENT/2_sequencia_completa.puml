@@ -1,0 +1,98 @@
+' ═══════════════════════════════════════════════════════════════════
+' EXTENSÃO — DIAGRAMA 6: SEQUÊNCIA COMPLETA
+' ═══════════════════════════════════════════════════════════════════
+@startuml extension_sequence
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+autonumber
+
+title RedShift CVE Agent — Sequência: Fluxo Completo
+
+actor Analista as UI
+participant "Dashboard SPA\n(windows_panel)" as DASH
+participant "content.ts\n(Content Script)" as CT
+participant "background.ts\n(Service Worker)" as BG
+participant "popup.ts\n(Extension UI)" as POPUP
+participant "FastAPI\n:8000" as API
+
+== Inicialização da Extensão ==
+
+POPUP -> API : GET /health {timeout: 4s}
+API --> POPUP : {status:"ok", model:"ollama/llama3.2",\n provider:"ollama"}
+POPUP -> POPUP : footerLabel = "Modelo: llama3.2"
+POPUP -> API : GET /api/config {timeout: 4s}
+API --> POPUP : {model, active_model,\n llm_provider, llm_timeout_seconds}
+POPUP -> POPUP : applyBackendConfigToSettings()
+POPUP -> POPUP : consumePendingWindowContext()\nconsumePendingCve()
+
+== Push de contexto SOC (prob ≥ 75%) ==
+
+DASH -> DASH : _pushWindowContextToExtension(w)\n[ou __wmPushAlertToExtension(el)]
+DASH -> CT : window.postMessage(\n  type: REDSHIFT_WINDOW_CONTEXT,\n  {windowId, label, probability,\n   tier, cves, iocs, phases,\n   assets, siemAlert}, '*')
+
+CT -> CT : event.origin verificado
+CT -> CT : chrome.storage.local.set(\n  {pendingWindowContext: ctx})
+
+alt [cves.length > 0]
+  CT -> BG : sendMessage({type: CVE_DETECTED,\n cveIds: [...]})
+  BG -> BG : setBadgeText(count)\nsetBadgeBackgroundColor('#e8192c')
+else [sem CVEs]
+  CT -> BG : sendMessage({type: WINDOW_CONTEXT_READY})
+  BG -> BG : setBadgeText('▸')\nsetBadgeBackgroundColor('#f97316')
+end
+
+== Analista abre o popup ==
+
+UI -> POPUP : clica no ícone da extensão
+POPUP -> POPUP : consumePendingWindowContext()
+POPUP -> POPUP : chrome.storage.local.get(\n  pendingWindowContext)
+POPUP -> POPUP : renderWindowContext(ctx)\n→ card SOC com tier, label,\n  probabilidade, CVEs, IoCs,\n  fases, botão "Analisar no SIEM"
+
+opt [siemAlert presente]
+  POPUP -> POPUP : botão "📊 Analisar no SIEM"\npré-preenchido e auto-click
+end
+
+== Tab CVE — análise manual ==
+
+UI -> POPUP : digita "CVE-2024-1234"\nclica "Analisar"
+POPUP -> POPUP : handleCveAnalyze()\nvalidar formato CVE-XXXX-XXXXX
+POPUP -> API : POST /api/v1/analysis/cve\n{cve_id, level: "intermediate"}
+note right of API
+  FastAPI:
+  1. fetch_cve() → NVD ou cache
+  2. analyze_cve() → LLM
+  Pode demorar 5-60s
+  conforme LLM e cache
+end note
+API --> POPUP : {cve_id, cve_data:\n  {id, cvss, description,\n   affected_products},\n analysis, model_used}
+POPUP -> POPUP : renderCveResult(data)\nmostrar CVSS, análise LLM,\nMITRE tags, sessão guardada
+
+== Tab SIEM — análise de alerta ==
+
+UI -> POPUP : cola JSON de alerta\nclica "Analisar Alerta"
+POPUP -> API : POST /api/v1/siem/analyze\n{alert: {rule.name, severity,\n kill_chain, ...},\n detail_level}
+API --> POPUP : {analysis, model_used}
+POPUP -> POPUP : renderSiemResult()\nmostrar análise estruturada
+
+== Tab Chat — assistente contextual ==
+
+UI -> POPUP : envia mensagem de chat
+POPUP -> POPUP : appendChatMsg('user', msg)\nappendChatTyping()
+POPUP -> API : POST /api/v1/analysis/chat\n{messages: [{role, content},...]}
+API --> POPUP : {reply, model_used}
+POPUP -> POPUP : removeTyping()\nappendChatMsg('agent', reply)\nsaveSession()
+@enduml

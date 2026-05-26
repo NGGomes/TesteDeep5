@@ -1,0 +1,104 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 1 — FLUXO DE CLASSIFICAÇÃO CISO
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent1_ciso_classification
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #e2e8f0
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #94a3b8
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Fluxo de Classificação CISO\n(por cada alerta recebido na janela)
+
+|Alerta|
+start
+:Receber alerta\n{Category, Type, Severity, Timestamp};
+
+|get_phase()|
+:Mapear (Category, Type)\n→ fase kill-chain + peso;
+note right
+  Tabela de mapeamento:
+  ──────────────────────────────
+  Reconnaissance*     → RECON         (w=5)
+  Credential Access*  → INITIAL_ACCESS (w=10)
+  Execution*          → EXECUTION      (w=15)
+  Persistence*        → PERSISTENCE    (w=15)
+  Lateral Movement*   → LATERAL_MOVEMENT (w=20)
+  Exfiltration*       → EXFILTRATION   (w=25)
+  Impact / Ransom*    → IMPACT         (w=30)
+  (outros)            → UNKNOWN        (w=10)
+end note
+:phase, weight;
+
+|get_phases_from_sequence()|
+:Deduplicar sequência de fases\nacumuladas na janela\n[RECON, INITIAL_ACCESS, EXFIL, ...];
+:unique_phases: List[str];
+
+|generate_hypotheses() — Prior estático|
+:Consultar tabela SEQUENCE_TO_CISO\ncom as unique_phases;
+note right
+  Prior estático — exemplos de categorias CISO:
+  ──────────────────────────────────────────
+  • Reconnaissance & Pre-Attack Intel. Gathering
+  • Targeted Intrusion Campaign
+  • Major Breach with Impact
+  • Data Exfiltration & Corporate Espionage
+  • Insider Threats & Physical Security Breaches
+  • Operational Noise
+  • APT Data Theft
+  • Ransomware & Destructive Attack
+  ──────────────────────────────────────────
+  Cada entrada tem probabilidade prior e risk_tier
+  (CRITICAL / HIGH / MEDIUM-HIGH / MEDIUM / LOW)
+end note
+:prior_options: List[Tuple[str, float]];
+
+|ProbabilisticClassifier.predict()|
+:Calcular phase_key\n= "|".join(unique_phases)\n  ex: "RECON|EXFILTRATION";
+
+if (learned data existe\npara este phase_key?) then (sim)
+  :Calcular learned_probs\ncom Laplace smoothing:\n  P(cat) = (confirmed + α) /\n(total + α × N_cats)\n  α = 1.0 (constante Laplace);
+  :Normalizar prior_map;
+  :Mistura ponderada:\n  p_final = (1-w) × prior + w × learned\n  w = 0.3 (LEARNING_WEIGHT);
+  :Normalizar p_final;
+else (não — cold start)
+  :Devolver prior inalterado\n(sem dados aprendidos);
+end if
+
+:Ordenar descendente por probabilidade;
+:top-N hipóteses\n(N = PROBABILISTIC_MAX_HYPOTHESES);
+
+|get_risk_tier()|
+:Atribuir risk_tier a cada categoria:\n  CRITICAL / HIGH / MEDIUM-HIGH\n  MEDIUM / LOW;
+
+|CISOOption[ ]|
+:CISOOption ×N\n{category, probability, risk_tier};
+
+|_check_convergence()|
+if (prob[0] ≥ 0.97\nAND n_alerts ≥ 1?) then (convergência rápida)
+  :is_closed = True\nemit window_closed;
+  stop
+elseif (prob[0] ≥ 0.85\nAND n_alerts ≥ 3?) then (convergência normal)
+  :is_closed = True\nemit window_closed;
+  stop
+elseif (prob[0] ≥ 0.75?) then (validação pendente)
+  :emit window_updated\n{ciso_options, timer};
+else (acumular)
+  :emit window_updated;
+end if
+stop
+@enduml

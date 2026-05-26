@@ -1,0 +1,93 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 4 — MÁQUINA DE ESTADOS
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent2_states
+!theme plain
+
+top to bottom direction
+skinparam linetype ortho
+
+skinparam roundcorner 10
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam StateBorderColor #94a3b8
+skinparam StateBackgroundColor #f8fafc
+skinparam StateFontColor #0f172a
+skinparam StateAttributeFontColor #475569
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #1e293b
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 2 — Máquina de Estados: Ciclo de Vida do Relatório
+
+[*] --> Inactivo : inicialização\n/ _load_queue()
+
+state Inactivo {
+  Inactivo : entry / carregar .pending_queue.json
+  Inactivo : do    / aguardar confirmação
+}
+
+Inactivo --> EmFila : confirmação recebida\n[_enqueue(label)]\n/ persistir .pending_queue.json
+
+state EmFila {
+  EmFila : entry / _pending_queue[label] = entry
+  EmFila : do    / aguardar _process_queue()
+  EmFila : entry / attempts = 0
+}
+
+EmFila --> AProcessar : _process_queue() chamado\n[label in _pending_queue]
+
+state AProcessar {
+  AProcessar : entry / attempts += 1
+  AProcessar : do    / contexto + alertas + extracção
+  AProcessar : do    / LLM analyze_incident()
+  AProcessar : do    / assemblar report Dict
+}
+
+AProcessar --> AGerarPDF : [_HAS_LATEX == True]\n/ CISOGenerator + SOCGenerator
+
+state AGerarPDF {
+  AGerarPDF : do / CISOReportGenerator.generate()
+  AGerarPDF : do / SOCReportGenerator.generate()
+  AGerarPDF : do / POST :5002/generate (pdflatex)
+}
+
+AGerarPDF --> AEmitir : PDF gerado com sucesso
+AProcessar --> AEmitir : [_HAS_LATEX == False]
+
+state AEmitir {
+  AEmitir : do / _emit_report()\n       POST :5001/ingest\n       {type: "ciso_report"}
+}
+
+AEmitir --> Concluido : [SSE /ingest retorna ok=True]
+AEmitir --> EmFila : [SSE /ingest falhou]\n/ manter em fila para retry
+
+state Concluido {
+  Concluido : entry / _dequeue_success(label)
+  Concluido : entry / _processed_confirmations.add(label)
+  Concluido : entry / guardar JSON em reports/agent2/
+  Concluido : entry / emit ciso_report SSE → Dashboard
+}
+
+Concluido --> Inactivo : / aguardar próxima confirmação
+
+AProcessar --> EmFila : [excepção LLM ou timeout]\n/ manter em fila\n  retry na próxima iteração
+
+note right of EmFila
+  Fila persistida em disco:
+  .pending_queue.json
+  Sobrevive a reinícios.
+  Cada entrada tem attempts
+  para auditoria de retries.
+end note
+
+note right of AProcessar
+  Módulos opcionais:
+  [_HAS_LLM] — análise LLM
+  [_HAS_ANALYZERS] — IoC/assets
+  [_HAS_LATEX] — PDF
+  Degradação graciosa se ausentes.
+end note
+@enduml

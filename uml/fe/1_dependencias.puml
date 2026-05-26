@@ -1,0 +1,117 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 1 — MÓDULOS E DEPENDÊNCIAS (COMPONENTES)
+' ═══════════════════════════════════════════════════════════════════
+@startuml frontend_components
+!theme plain
+
+top to bottom direction
+skinparam linetype ortho
+skinparam nodesep 30
+skinparam ranksep 160
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam ComponentFontColor #0f172a
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam PackageFontColor #0f172a
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Dashboard Frontend — Módulos e Dependências
+
+package "src/boot" {
+  component [template.ts\nAPP_TEMPLATE HTML] as TMPL
+}
+
+package "src/core" {
+  component [\nstore.ts\nEstado global reactivo\n] as STORE
+  component [\ntypes.ts\nInterfaces TypeScript\n] as TYPES
+  component [\nlogger.ts\nLogger estruturado\n] as LOG
+  component [\nconstants.ts\nSTORAGE_KEYS\n] as CONST
+}
+
+package "src/data" {
+  component [handlers.ts\ncomputeKPIs()] as HAND
+}
+
+package "src/components" {
+  component [\n\n\n\n\n\nmain.ts\nOrchestrador SSE + Render\n\n\n\n] as MAIN
+  component [windows_panel.ts\nrenderWindowsPanel()] as WP
+  component [agent2.ts\nrenderAgent2Panel()] as A2
+  component [alert_timeline.ts\nrenderAlertTimelineSVG()] as AT
+  component [slice.ts\nControlo de ritmo\n+ Slicer temporal] as SL
+  component [graph_viz.ts\nrenderHypothesisGraph()] as GV
+  component [sidebar.ts\nrenderSidebarKPIs()] as SB
+  component [kpi.ts\nrenderKPIStrip()] as KPI
+  component [modals.ts\nrenderDetailModal()] as MOD
+  component [footer.ts\nrenderConnectionBadge()] as FOOT
+}
+
+package "src/extension" {
+  component [content.ts\n__wmPushAlertToExtension\nwindow.postMessage()] as CONT
+}
+
+package "Servidor SSE :5001" {
+  component [SSE Broker\n/events] as SSE
+  interface "GET /events" as ISSE
+  interface "POST /api/agent1/*" as IAPI
+  SSE - ISSE
+  SSE - IAPI
+}
+
+' Dependências
+MAIN --> TMPL : <<imports>>
+MAIN --> STORE : <<imports>>\ngetAlerts, setConnection\ngetAgent2Reports...
+MAIN --> TYPES : <<imports>>\nWindowState, AlertPayload...
+MAIN --> LOG : <<imports>>
+MAIN --> HAND : computeKPIs()
+MAIN --> WP : renderWindowsPanel()
+MAIN --> A2 : renderAgent2Panel()
+MAIN --> AT : renderAlertTimelineSVG()
+MAIN --> SL : wireSliceControls()\nstartCountdown()
+MAIN --> GV : renderHypothesisGraph()
+MAIN --> SB : renderSidebarKPIs()
+MAIN --> KPI : renderKPIStrip()
+MAIN --> MOD : renderDetailModal()
+MAIN --> FOOT : renderConnectionBadge()
+
+WP --> TYPES : <<imports>>
+WP --> AT : renderAlertTimelineSVG()\n(mini-timeline nos cards)
+WP --> CONT : window.postMessage()\n__wmPushAlertToExtension()
+A2 --> TYPES : <<imports>>
+AT --> TYPES : <<imports>>
+SL --> TYPES : <<imports>>
+
+MAIN --> ISSE : new EventSource()\nconectaSSE()
+MAIN --> IAPI : POST process-next\nPOST confirm-hypothesis\nPOST seek\nPOST finish
+
+note top of STORE
+  Estado global:
+  • alerts: AlertPayload[]
+  • activeWindows: WindowState[]
+  • agent2Reports: Agent2Report[]
+  • graphState: HypothesisGraphState
+  • connection: string
+  • sliceState: SliceState
+  Persistido em sessionStorage
+end note
+
+note right of MAIN
+  Ponto de entrada único.
+  Orquestra:
+  • SSE event loop
+  • Render pipeline
+  • Timer management
+  • Extension push
+  • User events
+end note
+@enduml

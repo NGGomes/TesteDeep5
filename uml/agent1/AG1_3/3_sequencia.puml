@@ -1,0 +1,107 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 3 — SEQUÊNCIA (UML 2.x correcto)
+' ═══════════════════════════════════════════════════════════════════
+@startuml agent1_sequence
+!theme plain
+skinparam roundcorner 6
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam SequenceArrowColor #64748b
+skinparam SequenceArrowFontColor #475569
+skinparam SequenceLifeLineBorderColor #94a3b8
+skinparam SequenceLifeLineBackgroundColor #f8fafc
+skinparam SequenceParticipantBorderColor #94a3b8
+skinparam SequenceParticipantBackgroundColor #e2e8f0
+skinparam SequenceParticipantFontColor #0f172a
+skinparam SequenceBoxBorderColor #cbd5e1
+skinparam SequenceBoxBackgroundColor #f8fafc
+skinparam SequenceGroupBorderColor #94a3b8
+skinparam SequenceGroupFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+autonumber
+
+title Agent 1 — Diagrama de Sequência: Processamento de Alerta
+
+actor Analista as UI
+participant "SSE Server\n:5001" as SSE
+participant "main.py\n:8002" as MAIN
+participant "WindowManager" as WM
+participant "AdaptiveWindow" as AW
+participant "Classifier" as CL
+participant "HypothesisGraph" as HG
+
+UI -> SSE : POST /api/agent1/process-next {alert_index}
+SSE -> MAIN : POST /agent1/callback {alert}
+MAIN -> MAIN : _alert_queue.put(alert)
+
+note right of MAIN
+  Thread dedicada
+  process_alert_loop()
+  consome a fila
+end note
+
+MAIN -> WM : on_alert(alert, timestamp_ms)
+
+alt [janela activa existe para este timestamp]
+  WM -> AW : add_alert(alert, timestamp_ms)
+  AW -> AW : _add_alert()
+  AW -> AW : _try_extend(phase, weight)
+else [nenhuma janela activa]
+  WM -> AW ** : <<create>> AdaptiveWindow(trigger_alert)
+  AW -> SSE : POST /ingest {type: window_created}
+  SSE --> UI : event: window_created
+end
+
+AW -> CL : predict(phases, prior_options)
+CL --> AW : List[Tuple[label, probability]]
+AW -> AW : _update_ciso_options()
+
+AW -> AW : _check_convergence()
+
+alt [prob ≥ 97% AND len(alerts) ≥ 1]
+  AW -> AW : is_closed = True\nclose_reason = "convergence"
+  AW -> HG : add_evidence(window_id, hypothesis, score, phases)
+  AW -> SSE : POST /ingest {type: window_closed}
+  SSE --> UI : event: window_closed
+else [prob ≥ 85% AND len(alerts) ≥ 3]
+  AW -> AW : is_closed = True\nclose_reason = "convergence"
+  AW -> HG : add_evidence(window_id, hypothesis, score, phases)
+  AW -> SSE : POST /ingest {type: window_closed}
+  SSE --> UI : event: window_closed
+else [prob ≥ 75%]
+  AW -> AW : request_operator_validation()
+  AW -> SSE : POST /ingest {type: window_updated,\nciso_options: [...]}
+  SSE --> UI : event: window_updated
+  note right of UI
+    Botões de confirmação
+    visíveis no dashboard.
+    Timer de 120s iniciado.
+  end note
+else [prob < 75%]
+  AW -> SSE : POST /ingest {type: window_updated}
+  SSE --> UI : event: window_updated
+end
+
+AW -> SSE : POST /ingest {type: alert, ...alertas novos}
+SSE --> UI : event: alert
+
+HG -> HG : _apply_decay(now_ms)
+HG -> HG : _update_global_kill_chain_edges()
+HG -> SSE : POST /ingest {type: graph_state_update}
+SSE --> UI : event: graph_state_update
+
+MAIN -> SSE : POST /ingest {type: agent1_progress}
+MAIN -> SSE : POST /ingest {type: next_alert_info}
+SSE --> UI : event: agent1_progress + next_alert_info
+
+MAIN -> HG : auto_confirm_timeouts()
+
+opt [pending.expires_at_ms < now AND label ∉ confirmed_by_operator]
+  HG -> HG : node.confirmed = True\nconfirmed_by = "timeout"
+  HG -> SSE : POST /ingest {type: hypothesis_confirmed,\nmethod: "timeout"}
+  SSE --> UI : event: hypothesis_confirmed
+end
+@enduml

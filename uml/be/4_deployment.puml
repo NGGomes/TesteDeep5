@@ -1,0 +1,105 @@
+' ═══════════════════════════════════════════════════════════════════
+' BACKEND — DIAGRAMA 4: DEPLOYMENT
+' ═══════════════════════════════════════════════════════════════════
+@startuml backend_deployment
+!theme plain
+
+left to right direction
+skinparam linetype ortho
+skinparam nodesep 30
+skinparam ranksep 80
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam NodeBorderColor #94a3b8
+skinparam NodeBackgroundColor #f1f5f9
+skinparam NodeFontColor #0f172a
+skinparam ArtifactBorderColor #64748b
+skinparam ArtifactBackgroundColor #f8fafc
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #e2e8f0
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title FastAPI Backend — Deployment
+
+node "Servidor SOC" as HOST {
+
+  node "FastAPI Backend\nProcesso: uvicorn app.main:app\n127.0.0.1:8000" as API {
+    component [FastAPI App] as APP
+    component [CVE Service] as CVES
+    component [LLM Service\n(litellm)] as LLMS
+    component [Settings\n(pydantic)] as CFG
+    artifact ".env\nconfiguração" as ENV
+    artifact "data/cve_cache/\n*.json (cache NVD)" as CACHE
+
+    note bottom of API
+      Arrancado por run.bat [2]
+      após build da extensão.
+      Módulo: app.main:app
+      Dir: soc-dashboard/backend/
+    end note
+
+    note left of CFG
+      LLM_PROVIDER2 define o modelo activo
+      para análise (CVE, SIEM, Chat).
+      LLM_PROVIDER = "none"
+      Agent 1 é rule-based (sem LLM).
+    end note
+  }
+
+  node "SSE Server :5001" as SSE_NODE {
+    component [SSE Broker] as SSE
+  }
+
+  node "Agent 1 + Agent 2" as AGENTS {
+    component [HypothesisGraph] as HG
+    component [GraphReporter] as GR
+    artifact "reports/" as RPTS
+  }
+
+  API --> SSE_NODE : emit ciso_report\n(via trigger_report_now)
+  API --> AGENTS : get_global_graph()\nread reports/
+
+  CFG ..> ENV : pydantic-settings\ncarrega .env
+  CVES ..> CACHE : lê/escreve cache
+}
+
+
+together {
+  
+  ' 2. SEGUNDO NÓ (abaixo do HOST): LLM Runtime
+  node "LLM Runtime" as LLM_NODE {
+    node "Ollama :11434\n(local)" as OLLAMA_N {
+      component [llama3.2\nou outro modelo] as OLLAMACOMP
+    }
+    node "Anthropic API\n(remoto)" as ANTH_N {
+      component [claude-haiku-*] as ANTHCOMP
+    }
+  }
+
+  ' 3. TERCEIRO NÓ (abaixo do LLM Runtime): NVD / NIST
+  node "NVD / NIST\n(remoto)" as NVD_NODE {
+    component [CVE REST API] as NVDCOMP
+  }
+
+}
+
+' Ligações do HOST para os nós abaixo
+CVES --> NVD_NODE : httpx GET
+LLMS --> OLLAMA_N : litellm POST\n[provider=ollama]
+LLMS --> ANTH_N : litellm POST\n[provider=anthropic]
+
+node "Chrome Browser" as BROWSER {
+  component [RedShift Extension\n(popup.ts)] as EXT
+  component [Dashboard SPA] as DASH
+}
+
+EXT --> API : POST :8000/api/v1/analysis/*\n(CVE, SIEM, Chat)
+DASH --> API : GET :8000/health\nGET :8000/api/config
+
+@enduml

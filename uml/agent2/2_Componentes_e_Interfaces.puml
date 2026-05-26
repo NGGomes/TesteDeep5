@@ -1,0 +1,132 @@
+@startuml
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 2 — COMPONENTES E INTERFACES (A4 VERTICAL)
+' ═══════════════════════════════════════════════════════════════════
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 190
+
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ComponentBorderColor #94a3b8
+skinparam ComponentBackgroundColor #f8fafc
+skinparam ComponentFontColor #0f172a
+skinparam InterfaceBorderColor #64748b
+skinparam InterfaceBackgroundColor #e2e8f0
+skinparam PackageBorderColor #cbd5e1
+skinparam PackageBackgroundColor #f1f5f9
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+
+title Agent 2 — Diagrama de Componentes e Interfaces 
+
+package "Agent 2 — Graph Reporter" as P2 {
+  component [\n\nGraphReporter\nThread de polling\n\n] as GR
+  component [\n\nAlertLoader\nCache de alertas\n\n] as AL
+  component [\n\nIncidentAnalyzer\nLLM wrapper\n\n] as IA
+  component [\n\nDataExtractor\nIoC / Asset / CVE\n\n] as DE
+  component [\n\nCISOReportGenerator\nLaTeX CISO\n\n] as CG
+  component [\n\nSOCReportGenerator\nLaTeX SOC\n\n] as SG
+  component [\n\nMITREMapper\nATT&CK mapping\n\n] as MM
+
+  interface "\n\nIConfirmations\nget_confirmed_hypotheses()" as ICONF
+  interface "IGraphContext\nget_graph_state()" as IGCTX
+  interface "IAlertData\nget_alerts_by_ids()" as IALERT
+  interface "ILLMAnalysis\nanalyze_incident()" as ILLM
+  interface "ILaTeX\ngenerate()" as ILATEX
+  interface "IPendingQueue\n.pending_queue.json" as IQUEUE
+
+  GR - ICONF
+  GR - IGCTX
+  AL - IALERT
+  IA - ILLM
+  CG - ILATEX
+  SG - ILATEX
+  GR - IQUEUE
+
+  note left of GR
+    Dois caminhos de activação:
+    1. trigger_report_now()
+       chamado pelo SSE Server
+       após confirmação manual
+    2. run() poll loop
+       detecta confirmações novas
+       via get_confirmed_hypotheses()
+  end note
+
+  note right of IA
+    Flags de disponibilidade:
+    _HAS_LLM      — LLM activo
+    _HAS_LATEX    — LaTeX activo
+    _HAS_ANALYZERS — DataExtractor activo
+    Degradação graciosa se ausentes
+  end note
+}
+
+package "Agent 1 — Partilhado" as P1 {
+  component [\n\nHypothesisGraph\nSingleton\n\n] as HG
+  component [\n\nDataset .txt\n\n] as DS
+
+  interface "IGraph\nget_global_graph()" as IHG
+  HG - IHG
+  DS ..> AL : <<lê na startup>>
+}
+
+package "SSE Server :5001" as PSSE {
+  component [SSE Broker] as SSE
+  interface "POST /ingest" as IINGEST
+  SSE - IINGEST
+}
+
+package "Texer / LaTeX :5002" as PTEX {
+  component [pdflatex] as LATEX
+  interface "compilação .tex → .pdf" as ICOMPILE
+  LATEX - ICOMPILE
+}
+
+package "LLM Runtime" as PLLM {
+  component [Ollama / Anthropic\n/ OpenAI] as LLM
+  interface "POST /api/generate/messages" as ILLMAPI
+  LLM - ILLMAPI
+}
+
+package "Saída / Artefactos" as POUT {
+  artifact "graph_report_*.json" as JSON
+  artifact ".pending_queue.json" as QFILE
+  artifact "graph_report_*_ciso.pdf" as CPDF
+  artifact "graph_report_*_soc.pdf" as SPDF
+}
+
+' FORÇAR PILHA VERTICAL DOS PACKAGES
+'P1 -[hidden]left-> P2
+'PSSE -[hidden]up-> POUT
+'P1 -[hidden]left-> PSSE
+'PTEX -[hidden]down-> PLLM
+PLLM -[hidden]down-> POUT
+
+
+
+' Ligações (inalteradas)
+GR --> IHG : <<poll cada 2s>>
+GR --> IALERT : get_alerts_by_ids()
+GR --> ILLM : analyze_incident()
+GR --> ILATEX : generate(metadata, analysis)
+GR --> IINGEST : emit ciso_report
+GR --> IQUEUE : persist / restore
+
+IA --> ILLMAPI : <<HTTP POST>>\nLLM_PROVIDER2
+CG --> ICOMPILE : compila .tex
+SG --> ICOMPILE : compila .tex
+
+GR ..> JSON : <<cria>>
+GR ..> QFILE : <<persiste>>
+CG ..> CPDF : <<gera>>
+SG ..> SPDF : <<gera>>
+@enduml

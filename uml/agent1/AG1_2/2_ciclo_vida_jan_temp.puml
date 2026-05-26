@@ -1,0 +1,98 @@
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 3 — CICLO DE VIDA DA JANELA (ESTADO)
+' ═══════════════════════════════════════════════════════════════════
+
+@startuml agent1_window_states
+!theme plain
+
+skinparam linetype ortho
+skinparam nodesep 90
+skinparam ranksep 90
+
+skinparam roundcorner 10
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 11
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam StateBorderColor #94a3b8
+skinparam StateBackgroundColor #f8fafc
+skinparam StateFontColor #0f172a
+skinparam StateAttributeFontColor #475569
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Ciclo de Vida da Janela Temporal
+
+[*] --> CRIADA : trigger_alert recebido\n(primeiro alerta de nova sequência)
+
+state CRIADA {
+  CRIADA : • window_id gerado (UUID)
+  CRIADA : • expires_at = now + base_duration
+  CRIADA : • 1 alerta (trigger)
+  CRIADA : • ciso_options calculadas
+  CRIADA : emit → window_created SSE
+}
+
+CRIADA --> ACTIVA : alertas adicionais\ncorrelacionados
+
+state ACTIVA {
+  ACTIVA : • novos alertas aceites
+  ACTIVA : • fases kill-chain acumuladas
+  ACTIVA : • classificador actualizado
+  ACTIVA : • scores recalculados por decay
+  ACTIVA : emit → window_updated SSE
+}
+
+ACTIVA --> ACTIVA : alerta correlacionado\n+ extensão temporal\n(phase_weight minutos)
+ACTIVA --> VALIDACAO_PENDENTE : prob ≥ 75%\n(botões confirmação visíveis)
+
+state VALIDACAO_PENDENTE {
+  VALIDACAO_PENDENTE : • 3 hipóteses mostradas
+  VALIDACAO_PENDENTE : • timer countdown visível
+  VALIDACAO_PENDENTE : • aguarda operador (120s)
+}
+
+VALIDACAO_PENDENTE --> FECHADA_OPERADOR : operador selecciona\nhipótese
+VALIDACAO_PENDENTE --> FECHADA_TIMEOUT : timer expira
+VALIDACAO_PENDENTE --> FECHADA_CONVERGENCIA : prob ≥ 85% e alertas ≥ 3\nou prob ≥ 97% e alertas ≥ 1
+
+ACTIVA --> FECHADA_CONVERGENCIA : prob ≥ 85% e alertas ≥ 3\nou prob ≥ 97% e alertas ≥ 1
+ACTIVA --> FECHADA_TIMEOUT : expires_at_ms expirou
+
+state FECHADA_OPERADOR {
+  FECHADA_OPERADOR : method = "operator"
+  FECHADA_OPERADOR : classifier.record_confirmation()
+  FECHADA_OPERADOR : emit → hypothesis_confirmed
+}
+
+state FECHADA_TIMEOUT {
+  FECHADA_TIMEOUT : method = "timeout"
+  FECHADA_TIMEOUT : auto_confirm_timeouts()
+  FECHADA_TIMEOUT : emit → hypothesis_confirmed
+}
+
+state FECHADA_CONVERGENCIA {
+  FECHADA_CONVERGENCIA : method = "convergence"
+  FECHADA_CONVERGENCIA : emit → window_closed
+  FECHADA_CONVERGENCIA : → HypothesisGraph.add_evidence()
+}
+
+FECHADA_OPERADOR --> [*] : → Agent 2 gera relatório
+FECHADA_TIMEOUT --> [*] : → Agent 2 gera relatório
+FECHADA_CONVERGENCIA --> [*] : → Agent 2 gera relatório
+
+note right of FECHADA_OPERADOR
+  Feedback loop:
+  classifier aprende
+  a preferência do analista
+  para esta sequência de fases
+end note
+
+note right of FECHADA_CONVERGENCIA
+  Condições:
+  NORMAL: prob≥85% e n≥3
+  RÁPIDA: prob≥97% e n≥1
+end note
+@enduml

@@ -1,0 +1,106 @@
+
+
+' ═══════════════════════════════════════════════════════════════════
+' DIAGRAMA 4 — CLASSIFICAÇÃO CISO (ACTIVIDADE)
+' ═══════════════════════════════════════════════════════════════════
+
+@startuml agent1_classification
+!theme plain
+skinparam roundcorner 8
+skinparam backgroundColor #ffffff
+skinparam defaultFontColor #1e293b
+skinparam defaultFontSize 10
+skinparam ArrowColor #64748b
+skinparam ArrowFontColor #475569
+skinparam ActivityBorderColor #94a3b8
+skinparam ActivityBackgroundColor #f8fafc
+skinparam ActivityFontColor #0f172a
+skinparam ActivityDiamondBackgroundColor #f1f5f9
+skinparam ActivityDiamondBorderColor #64748b
+skinparam ActivityDiamondFontColor #0f172a
+skinparam PartitionBorderColor #cbd5e1
+skinparam PartitionBackgroundColor #f8fafc
+skinparam PartitionFontColor #0f172a
+skinparam NoteBackgroundColor #fef9c3
+skinparam NoteBorderColor #fcd34d
+skinparam NoteFontColor #1e293b
+
+title Agent 1 — Classificação CISO por Alerta
+
+start
+
+:Alerta recebido\n{Category, Type, Severity, Timestamp};
+
+partition "Extracção de Fase (Kill-Chain)" {
+  :get_phase(category, type);
+  note right
+    Mapeamento de pesos:
+    RECON           = 5 min
+    INITIAL_ACCESS  = 10 min
+    EXECUTION       = 15 min
+    PERSISTENCE     = 15 min
+    LATERAL_MOVEMENT= 20 min
+    EXFILTRATION    = 25 min
+    IMPACT          = 30 min
+    UNKNOWN         = 10 min
+  end note
+  :phase, weight = resultado;
+}
+
+partition "Gestão de Janela Temporal" {
+  if (fase == UNKNOWN e score baixo?) then (sim)
+    :is_noise = True\nnão extende janela;
+  else (não)
+    if (janela activa existe?) then (sim)
+      :_try_extend(phase, weight)\nexpires_at += weight minutos\n(máx 2× base duration);
+    else (não)
+      :criar nova AdaptiveWindow\ncom este alerta como trigger;
+    end if
+  end if
+}
+
+partition "Classificador Probabilístico" {
+  :fases acumuladas da janela;
+  :P(hipótese | fases) — Naive Bayes;
+  note right
+    Classes CISO:
+    • Reconnaissance & Pre-Attack
+    • Targeted Intrusion Campaign
+    • Major Breach with Impact
+    • Data Exfiltration & Corporate Espionage
+    • Insider Threats & Physical Security
+    • Operational Noise
+  end note
+  :normalizar → top-3 com probabilidades;
+  :risk_tier: CRITICAL / HIGH / MEDIUM / LOW;
+}
+
+partition "Actualização do Grafo" {
+  :HypothesisGraph.add_evidence();
+  :_apply_decay() — reduz scores antigos;
+  :actualizar nó da hipótese top;
+  :actualizar edges kill-chain;
+}
+
+partition "Verificação de Limiar" {
+  if (prob ≥ 97% e alertas ≥ 1?) then (convergência rápida)
+    :fechar janela\nclose_reason = "convergence";
+    :emit hypothesis_confirmed;
+    stop
+  elseif (prob ≥ 85% e alertas ≥ 3?) then (convergência normal)
+    :fechar janela\nclose_reason = "convergence";
+    :emit hypothesis_confirmed;
+    stop
+  elseif (prob ≥ 75%?) then (validação pendente)
+    :mostrar botões confirmação;
+    :iniciar timer 120s;
+  else (acumular evidência)
+    :emit window_updated;
+  end if
+}
+
+:emit agent1_progress + next_alert_info;
+:auto_confirm_timeouts();
+
+stop
+@enduml
