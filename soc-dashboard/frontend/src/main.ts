@@ -327,18 +327,40 @@ function _pushWindowContextToExtension(w: any): void {
   if (topPct < EXT_PUSH_THRESHOLD) return;
 
   const alerts = (w.alerts || []) as any[];
-  const cveRe  = /CVE-\d{4}-\d{4,}/gi;
+
+  // Extract CVEs from all alerts in the window
+  const cveRe = /CVE-\d{4}-\d{4,}/gi;
   const cves: string[] = [];
-  const seen = new Set<string>();
+  const cveSeen = new Set<string>();
   alerts.forEach((a: any) => {
     const text = JSON.stringify(a);
     let m: RegExpExecArray | null;
     cveRe.lastIndex = 0;
     while ((m = cveRe.exec(text)) !== null) {
       const c = m[0].toUpperCase();
-      if (!seen.has(c)) { seen.add(c); cves.push(c); }
+      if (!cveSeen.has(c)) { cveSeen.add(c); cves.push(c); }
     }
   });
+
+  // Extract assets from all alerts in the window (AffectedAsset field)
+  const assetsSeen = new Set<string>();
+  const assets: string[] = [];
+  alerts.forEach((a: any) => {
+    const asset = a.affected_asset || a.AffectedAsset || '';
+    if (asset && !assetsSeen.has(asset)) { assetsSeen.add(asset); assets.push(asset); }
+  });
+
+  // Resolve rawTrigger once — reused for both assets and siemAlert
+  const triggerNum = _windowTriggers.get(w.window_id);
+  const rawTrigger = triggerNum ? _rawAlertsByNumber.get(triggerNum) : null;
+
+  // Also include rawTrigger asset if not already present
+  const triggerAsset = rawTrigger?.AffectedAsset || '';
+  if (triggerAsset && !assetsSeen.has(triggerAsset)) { assetsSeen.add(triggerAsset); assets.push(triggerAsset); }
+
+  const _INT = new Set(['AGENT1_', 'AGENT1', 'AGENT2']);
+  const clean = (o: Record<string, any>) =>
+    Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v != null));
 
   _pushedToExtension.add(w.window_id);
   window.postMessage({
@@ -350,47 +372,34 @@ function _pushWindowContextToExtension(w: any): void {
     cves,
     iocs:        [],
     phases:      w.phases || [],
-    assets:      [],
-    ...((): { siemAlert: any } => {
-      const triggerNum = _windowTriggers.get(w.window_id);
-      const rawTrigger = triggerNum ? _rawAlertsByNumber.get(triggerNum) : null;
-      console.log('[EXT] window_id:', w.window_id, 
-            'triggerNum:', triggerNum, 
-            'rawTrigger:', rawTrigger,
-            'rawKeys:', [..._rawAlertsByNumber.keys()].slice(0,5));
-      const _INT = new Set(['AGENT1_', 'AGENT1', 'AGENT2']);
-      const clean = (o: Record<string, any>) =>
-        Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v != null));
-      return {
-        siemAlert: clean(rawTrigger ? {
-          'alert_number':   rawTrigger.Number        || '',
-          'title':          rawTrigger.Title         || '',
-          'description':    rawTrigger.Description   || '',
-          'mitre_attack':   rawTrigger.MitreAttack   || '',
-          'affected_asset': rawTrigger.AffectedAsset || '',
-          'tags':           rawTrigger.Tags          || '',
-          'tlp':            rawTrigger.TLP           || '',
-          'priority':       rawTrigger.Priority      || '',
-          'severity':       rawTrigger.Severity      || '',
-          'source':         _INT.has(rawTrigger.Source || '') ? '' : (rawTrigger.Source || ''),
-          'kill_chain':     (w.phases || []).join(' → '),
-          'alert_count':    alerts.length,
-          'cves_detected':  cves,
-          'window_id':      w.window_id,
-          'phase_score':    w.phase_score || 0,
-          'hypothesis':     options[0]?.category || '',
-          'risk_tier':      options[0]?.risk_tier || '',
-        } : {
-          'hypothesis':    options[0]?.category || '',
-          'risk_tier':     options[0]?.risk_tier || '',
-          'kill_chain':    (w.phases || []).join(' → '),
-          'alert_count':   alerts.length,
-          'cves_detected': cves,
-          'window_id':     w.window_id,
-          'phase_score':   w.phase_score || 0,
-        }),
-      };
-    })(),
+    assets,
+    siemAlert: clean(rawTrigger ? {
+      'alert_number':   rawTrigger.Number        || '',
+      'title':          rawTrigger.Title         || '',
+      'description':    rawTrigger.Description   || '',
+      'mitre_attack':   rawTrigger.MitreAttack   || '',
+      'affected_asset': rawTrigger.AffectedAsset || '',
+      'tags':           rawTrigger.Tags          || '',
+      'tlp':            rawTrigger.TLP           || '',
+      'priority':       rawTrigger.Priority      || '',
+      'severity':       rawTrigger.Severity      || '',
+      'source':         _INT.has(rawTrigger.Source || '') ? '' : (rawTrigger.Source || ''),
+      'kill_chain':     (w.phases || []).join(' → '),
+      'alert_count':    alerts.length,
+      'cves_detected':  cves,
+      'window_id':      w.window_id,
+      'phase_score':    w.phase_score || 0,
+      'hypothesis':     options[0]?.category || '',
+      'risk_tier':      options[0]?.risk_tier || '',
+    } : {
+      'hypothesis':    options[0]?.category || '',
+      'risk_tier':     options[0]?.risk_tier || '',
+      'kill_chain':    (w.phases || []).join(' → '),
+      'alert_count':   alerts.length,
+      'cves_detected': cves,
+      'window_id':     w.window_id,
+      'phase_score':   w.phase_score || 0,
+    }),
   }, '*');
 }
 
@@ -720,13 +729,28 @@ setupTimelineClickHandler((number: string) => {
       Object.entries(obj).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
     );
 
+  // Extract CVEs from raw alert fields (Title, Description, Tags)
+  const _cveRe = /CVE-\d{4}-\d{4,}/gi;
+  const _cves: string[] = [];
+  const _cveSeen = new Set<string>();
+  const _cveText = [
+    raw?.Title       || '',
+    raw?.Description || '',
+    raw?.Tags        || '',
+  ].join(' ');
+  let _cveMatch: RegExpExecArray | null;
+  while ((_cveMatch = _cveRe.exec(_cveText)) !== null) {
+    const c = _cveMatch[0].toUpperCase();
+    if (!_cveSeen.has(c)) { _cveSeen.add(c); _cves.push(c); }
+  }
+ 
   window.postMessage({
     type:        'REDSHIFT_WINDOW_CONTEXT',
     windowId:    a.window_id || '',
     label:       a.category  || '',
     probability: 0,
     tier:        a.severity  || '',
-    cves:        [],
+    cves:        _cves,
     iocs:        raw?.AffectedAsset ? [raw.AffectedAsset] : [],
     phases:      a.kill_chain ? [a.kill_chain] : (a.phases_detected || []),
     assets:      raw?.AffectedAsset ? [raw.AffectedAsset] : [],
